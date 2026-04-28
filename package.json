@@ -1,0 +1,30 @@
+{
+  "name": "japkgen",
+  "version": "0.1.0",
+  "description": "JAPK - A Java Aplication Template Generator.",
+  "keywords": [
+    "javac",
+    "java",
+    "d8",
+    "build",
+    "apk",
+    "app",
+    "generator",
+    "cli"
+  ],
+  "license": "Apache-2.0",
+  "author": "OpenDN Foundation",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "japkgen": "index.js"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "picocolors": "^1.1.0",
+    "ora": "^8.0.0",
+    "fs-extra": "^11.0.0",
+    "prompts": "^2.4.2",
+    "execa": "^9.0.0"
+  }
+}
