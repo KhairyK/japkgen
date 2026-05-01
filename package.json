@@ -1,7 +1,7 @@
 {
   "name": "japkgen",
-  "version": "1.0.0",
-  "description": "JAPK - A Java Aplication Template Generator.",
+  "version": "1.1.0",
+  "description": "JAPK - A Java Application Template Generator.",
   "keywords": [
     "javac",
     "java",
@@ -12,26 +12,35 @@
     "generator",
     "cli"
   ],
-  "license": "Apache-2.0",
-  "author": "OpenDN Foundation",
-  "type": "module",
-  "main": "index.js",
-  "bin": {
-    "japkgen": "index.js"
-  },
-  "dependencies": {
-    "commander": "^12.0.0",
-    "picocolors": "^1.1.0",
-    "ora": "^8.0.0",
-    "fs-extra": "^11.0.0",
-    "prompts": "^2.4.2",
-    "execa": "^9.0.0"
-  },
+  "homepage": "https://japkgen.opendnf.cloud/",
   "repository": {
     "type": "git",
     "url": "https://github.com/KhairyK/japkgen.git"
   },
   "bugs": {
     "url": "https://github.com/KhairyK/japkgen/issues"
+  },
+  "license": "Apache-2.0",
+  "author": {
+    "name": "OpenDN Foundation",
+    "email": "opendnfoundation@gmail.com",
+    "url": "https://opendnf.cloud/about"
+  },
+  "type": "module",
+  "main": "./src/index.js",
+  "bin": {
+    "japkgen": "./src/index.js"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "execa": "^9.0.0",
+    "fs-extra": "^11.0.0",
+    "ora": "^8.0.0",
+    "picocolors": "^1.1.0",
+    "prompts": "^2.4.2",
+    "sharp": "^0.34.5"
+  },
+  "engines": {
+    "node": ">=18 <25"
   }
 }
