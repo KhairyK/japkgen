@@ -1,4 +1,4 @@
-# japkgen
+# JAPK Generator
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
@@ -42,15 +42,6 @@ Install the package globally:
 
 ```bash
 npm install -g japkgen
-```
-
-For local development:
-
-```bash
-git clone https://github.com/your-username/japkgen.git
-cd japkgen
-npm install
-npm link
 ```
 
 ## Usage
