@@ -1,59 +1,53 @@
-import os from 'node:os';
-import path from 'node:path';
-import { execa } from 'execa';
-import fs from 'fs-extra';
-import { fileExistsAny, getDefaultAndroidSdkPaths } from './utils.js';
-import /**
- * @typedef {import('./types.js').EnvironmentInfo} EnvironmentInfo
- */ './types.js';
+import os from "node:os";
+import path from "node:path";
+import { DEFAULTS } from "./constants.js";
+import { detectCommand, fileExistsAny, getDefaultAndroidSdkPaths } from "./utils.js";
 
-async function runVersionCheck(cmd, args) {
+async function runVersionCheck(command, args) {
   try {
-    const result = await execa(cmd, args, { reject: false });
+    const ok = await detectCommand(command, args);
+    if (!ok) return { ok: false, output: "" };
+    const { runCommand } = await import("./utils.js");
+    const result = await runCommand(command, args, { reject: false });
     return {
-      ok: result.exitCode === 0,
-      output: String(result.stderr || result.stdout || '').trim()
+      ok: result.ok,
+      output: String((result.stderr || result.stdout || "").trim())
     };
   } catch (error) {
     return {
       ok: false,
-      output: String(error?.message || error)
+      output: String(error?.message || error || "")
     };
   }
 }
 
-/**
- * Detect environment Android dev
- *
- * @returns {Promise<EnvironmentInfo>}
- */
 export async function detectEnvironment() {
+  const sdkRoot =
+    process.env.ANDROID_SDK_ROOT ||
+    process.env.ANDROID_HOME ||
+    (await fileExistsAny(getDefaultAndroidSdkPaths()));
+
   const env = {
     platform: process.platform,
     arch: process.arch,
     node: process.version,
     cwd: process.cwd(),
     home: os.homedir(),
-    java: await runVersionCheck('java', ['-version']),
-    gradle: await runVersionCheck('gradle', ['-v']),
-    adb: await runVersionCheck('adb', ['version']),
-    sdkRoot:
-      process.env.ANDROID_SDK_ROOT ||
-      process.env.ANDROID_HOME ||
-      (await fileExistsAny(getDefaultAndroidSdkPaths())),
-    hasWrapper: false
+    java: await runVersionCheck("java", ["-version"]),
+    gradle: await runVersionCheck("gradle", ["-v"]),
+    adb: await runVersionCheck("adb", ["version"]),
+    sdkRoot: sdkRoot ? path.resolve(sdkRoot) : null,
+    hasSdkRoot: false,
+    sdkPlatformTools: false,
+    sdkBuildTools: false,
+    gradleWrapper: false,
+    recommendedJava: DEFAULTS.javaVersion
   };
 
   if (env.sdkRoot) {
-    const sdkPath = path.resolve(env.sdkRoot);
-    env.sdkRoot = sdkPath;
-    env.hasSdkRoot = await fs.pathExists(sdkPath);
-    env.sdkPlatformTools = await fs.pathExists(path.join(sdkPath, 'platform-tools'));
-    env.sdkBuildTools = await fs.pathExists(path.join(sdkPath, 'build-tools'));
-  } else {
-    env.hasSdkRoot = false;
-    env.sdkPlatformTools = false;
-    env.sdkBuildTools = false;
+    env.hasSdkRoot = true;
+    env.sdkPlatformTools = await fileExistsAny([path.join(env.sdkRoot, "platform-tools")]);
+    env.sdkBuildTools = await fileExistsAny([path.join(env.sdkRoot, "build-tools")]);
   }
 
   return env;

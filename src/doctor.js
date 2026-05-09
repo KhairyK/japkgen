@@ -1,48 +1,33 @@
-import pc from 'picocolors';
-import { detectEnvironment } from './environment.js';
+import path from "node:path";
+import { detectEnvironment } from "./environment.js";
+import { logger } from "./logger.js";
+import { fileExists } from "./utils.js";
 
 function tick(ok) {
-  return ok ? pc.green('✔') : pc.red('✖');
+  return ok ? "✔" : "✖";
 }
 
-/**
- * Run doctor to check the environment
- *
- * @returns {Promise<void>}
- *
- * @example
- * japkgen doctor
- */
 export async function runDoctor() {
   const env = await detectEnvironment();
 
-  console.log(pc.bold('\nJAPKGEN Doctor\n'));
+  logger.title("JAPKGEN Doctor");
+  logger.bullet("Platform", `${env.platform} (${env.arch})`);
+  logger.bullet("Node", env.node);
+  logger.bullet("Java", `${tick(env.java.ok)} ${env.java.ok ? "found" : "missing"}`);
+  logger.bullet("Gradle", `${tick(env.gradle.ok)} ${env.gradle.ok ? "found" : "missing"}`);
+  logger.bullet("ADB", `${tick(env.adb.ok)} ${env.adb.ok ? "found" : "missing"}`);
+  logger.bullet("Android SDK", env.sdkRoot || "not found");
+  logger.bullet("platform-tools", tick(Boolean(env.sdkPlatformTools)));
+  logger.bullet("build-tools", tick(Boolean(env.sdkBuildTools)));
 
-  console.log(`${tick(true)} Platform: ${env.platform} (${env.arch})`);
-  console.log(`${tick(true)} Node: ${env.node}`);
+  const hasWrapper = await fileExists(path.join(process.cwd(), "gradlew")) || await fileExists(path.join(process.cwd(), "gradlew.bat"));
+  logger.bullet("Gradle wrapper", tick(hasWrapper));
 
-  console.log(`${tick(env.java.ok)} Java: ${env.java.ok ? 'found' : 'missing'}`);
-  if (env.java.output) console.log(pc.dim(env.java.output.split('\n')[0] || ''));
-
-  console.log(`${tick(env.gradle.ok)} Gradle: ${env.gradle.ok ? 'found' : 'missing'}`);
-  if (env.gradle.output) console.log(pc.dim(env.gradle.output.split('\n')[0] || ''));
-
-  console.log(`${tick(env.adb.ok)} ADB: ${env.adb.ok ? 'found' : 'missing'}`);
-
-  console.log(`${tick(Boolean(env.sdkRoot))} Android SDK: ${env.sdkRoot || 'not found'}`);
-  console.log(`${tick(Boolean(env.sdkPlatformTools))} platform-tools: ${env.sdkPlatformTools ? 'ok' : 'missing'}`);
-  console.log(`${tick(Boolean(env.sdkBuildTools))} build-tools: ${env.sdkBuildTools ? 'ok' : 'missing'}`);
-
-  console.log('');
-  if (!env.sdkRoot) {
-    console.log(pc.yellow('Android SDK not found yet. Set ANDROID_SDK_ROOT or ANDROID_HOME.'));
-  }
-  if (!env.java.ok) {
-    console.log(pc.yellow('Java not found. Use JDK 17 for best compatibility.'));
-  }
-  if (!env.gradle.ok) {
-    console.log(pc.yellow('Gradle global not found. Project can still be built if the wrapper is present.'));
-  }
+  logger.plain("");
+  if (!env.sdkRoot) logger.warn("Android SDK belum ketemu. Set ANDROID_SDK_ROOT atau ANDROID_HOME.");
+  if (!env.java.ok) logger.warn("Java belum ketemu. JDK 17 paling aman buat Android build modern.");
+  if (!env.gradle.ok) logger.warn("Gradle global belum ketemu. Kalau project punya wrapper, itu tetap aman.");
+  if (!hasWrapper) logger.warn("Gradle wrapper belum ada di folder ini.");
 
   return env;
 }

@@ -1,88 +1,75 @@
-import os from 'node:os';
-import path from 'node:path';
-import process from 'node:process';
-import fs from 'fs-extra';
-import ora from 'ora';
-import pc from 'picocolors';
-import prompts from 'prompts';
-import { execa } from 'execa';
+import path from "node:path";
+import fs from "node:fs/promises";
+import process from "node:process";
 
-import { DEFAULTS } from './constants.js';
-import { getTemplate } from './templates.js';
+import { DEFAULTS, SUPPORTED_TEMPLATES } from "./constants.js";
+import { getTemplate, BUILTIN_TEMPLATES } from "./templates.js";
+import { generateIcons } from "./icons.js";
+import { logger } from "./logger.js";
 import {
   applyTemplate,
+  fileExists,
   hasHttpUrl,
-  normalizePathValue,
+  normalizeBoolean,
   parsePermissions,
+  pickFirstDefined,
+  templateExists,
   toJniPackage,
   toPackagePath,
   uniq,
-  writeFileEnsured,
-  templateExists
-} from './utils.js';
-import { pickSigningOptions, writeSigningFiles } from './signing.js';
-import { generateIcons } from './icons.js';
+  writeFileEnsured
+} from "./utils.js";
+import { writeSigningFiles } from "./signing.js";
+import { loadPlugins, runHooks } from "./plugins.js";
 
-async function bootstrapGradleWrapper(projectDir, gradleVersion) {
-  if (await templateExists(projectDir)) return;
-
-  const gradleBin = process.platform === 'win32' ? 'gradle.bat' : 'gradle';
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'japkgen-wrapper-'));
-  const spinner = ora(`Bootstrapping Gradle wrapper ${gradleVersion}`).start();
-
+async function promptText(message, initial = "") {
+  const { createInterface } = await import("node:readline/promises");
+  const r = createInterface({ input: process.stdin, output: process.stdout });
   try {
-    await writeFileEnsured(
-      path.join(tempDir, 'settings.gradle'),
-      `rootProject.name = 'wrapper-bootstrap'\n`
-    );
-    await writeFileEnsured(path.join(tempDir, 'build.gradle'), `\n`);
-
-    await execa(
-      gradleBin,
-      ['wrapper', '--gradle-version', String(gradleVersion), '--distribution-type', 'bin'],
-      {
-        cwd: tempDir,
-        stdio: 'inherit'
-      }
-    );
-
-    await fs.ensureDir(path.join(projectDir, 'gradle', 'wrapper'));
-
-    const copies = [
-      ['gradlew', 'gradlew'],
-      ['gradlew.bat', 'gradlew.bat'],
-      ['gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.jar'],
-      ['gradle/wrapper/gradle-wrapper.properties', 'gradle/wrapper/gradle-wrapper.properties']
-    ];
-
-    for (const [srcRel, dstRel] of copies) {
-      await fs.copy(path.join(tempDir, srcRel), path.join(projectDir, dstRel), { overwrite: true });
-    }
-
-    if (process.platform !== 'win32') {
-      await fs.chmod(path.join(projectDir, 'gradlew'), 0o755);
-    }
-
-    spinner.succeed('Gradle wrapper ready');
-  } catch (error) {
-    spinner.fail('Failed to bootstrap Gradle wrapper');
-    throw error;
+    const ans = await r.question(`${message}${initial ? ` (${initial})` : ""}: `);
+    return String(ans).trim() || initial;
   } finally {
-    await fs.remove(tempDir);
+    r.close();
   }
 }
 
-async function ensureLocalProperties(projectDir) {
-  const androidSdkRoot = process.env.ANDROID_SDK_ROOT || process.env.ANDROID_HOME;
-  if (!androidSdkRoot) return;
+async function promptYesNo(message, initial = false) {
+  const { createInterface } = await import("node:readline/promises");
+  const r = createInterface({ input: process.stdin, output: process.stdout });
+  const suffix = initial ? " [Y/n]" : " [y/N]";
+  try {
+    while (true) {
+      const ans = String(await r.question(`${message}${suffix}: `)).trim().toLowerCase();
+      if (!ans) return initial;
+      if (["y", "yes", "true", "1"].includes(ans)) return true;
+      if (["n", "no", "false", "0"].includes(ans)) return false;
+      console.log("Please answer with yes or no.");
+    }
+  } finally {
+    r.close();
+  }
+}
 
-  const localPropsPath = path.join(projectDir, 'local.properties');
-  const content = `sdk.dir=${normalizePathValue(androidSdkRoot)}\n`;
-  await writeFileEnsured(localPropsPath, content);
+function normalizeTemplateName(name) {
+  return String(name || "").trim().toLowerCase();
+}
+
+function smartPermissions({ templateName, url, permissions }) {
+  const list = parsePermissions(permissions);
+
+  if (templateName === "webview" || templateName === "pwa") {
+    list.push("android.permission.INTERNET");
+  }
+
+  if (templateName === "webview" && hasHttpUrl(url)) {
+    list.push("android.permission.ACCESS_NETWORK_STATE");
+  }
+
+  return uniq(list);
 }
 
 async function writeTemplateProject(projectDir, template, vars) {
-  for (const [rawRelativePath, rawContent] of Object.entries(template.files)) {
+  for (const [rawRelativePath, rawContent] of Object.entries(template.files || {})) {
     const relativePath = applyTemplate(rawRelativePath, vars);
     const outputPath = path.join(projectDir, relativePath);
     const outputContent = applyTemplate(rawContent, vars);
@@ -90,184 +77,62 @@ async function writeTemplateProject(projectDir, template, vars) {
   }
 }
 
-function smartPermissions({ templateName, url, permissions }) {
-  const list = parsePermissions(permissions);
-
-  if (templateName === 'webview') {
-    list.push('android.permission.INTERNET');
-    if (hasHttpUrl(url)) {
-      list.push('android.permission.ACCESS_NETWORK_STATE');
-    }
-  }
-
-  if (templateName === 'pwa' && hasHttpUrl(url)) {
-    list.push('android.permission.INTERNET');
-  }
-
-  return uniq(list);
+async function resolveProjectDir(name) {
+  const safeName = String(name).trim() || DEFAULTS.appName;
+  return path.resolve(process.cwd(), safeName);
 }
 
-async function pickGenerateOptions(cliOptions) {
-  let selectedTemplate = cliOptions.template;
+async function getResolvedTemplate(templateName, pluginTemplates = {}) {
+  const mergedRegistry = { ...BUILTIN_TEMPLATES, ...pluginTemplates };
+  const template = getTemplate(templateName, mergedRegistry);
+  return template ? { template, registry: mergedRegistry } : { template: null, registry: mergedRegistry };
+}
 
-  if (!selectedTemplate) {
-    const templateAnswer = await prompts(
-      {
-        type: 'select',
-        name: 'template',
-        message: 'Template',
-        choices: [
-          { title: 'WebView', value: 'webview' },
-          { title: 'PWA', value: 'pwa' },
-          { title: 'Native', value: 'native' },
-          { title: 'Game Java', value: 'game-java' },
-          { title: 'Game C++', value: 'game-cpp' }
-        ],
-        initial: 0
-      },
-      { onCancel: () => process.exit(1) }
-    );
-
-    selectedTemplate = templateAnswer.template;
-  }
-
-  const questions = [];
-
-  if (!cliOptions.name) {
-    questions.push({
-      type: 'text',
-      name: 'name',
-      message: 'App name',
-      initial: DEFAULTS.appName
-    });
-  }
-
-  if (!cliOptions.package) {
-    questions.push({
-      type: 'text',
-      name: 'package',
-      message: 'Package name',
-      initial: DEFAULTS.packageName
-    });
-  }
-
-  if (cliOptions.minSdk == null) {
-    questions.push({
-      type: 'number',
-      name: 'minSdk',
-      message: 'Min SDK',
-      initial: DEFAULTS.minSdk
-    });
-  }
-
-  if (cliOptions.targetSdk == null) {
-    questions.push({
-      type: 'number',
-      name: 'targetSdk',
-      message: 'Target SDK',
-      initial: DEFAULTS.targetSdk
-    });
-  }
-
-  if (cliOptions.compileSdk == null) {
-    questions.push({
-      type: 'number',
-      name: 'compileSdk',
-      message: 'Compile SDK',
-      initial: DEFAULTS.compileSdk
-    });
-  }
-
-  if (selectedTemplate === 'webview' && !cliOptions.url) {
-    questions.push({
-      type: 'text',
-      name: 'url',
-      message: 'WebView URL',
-      initial: DEFAULTS.webUrl
-    });
-  }
-
-  if (!cliOptions.permissions) {
-    questions.push({
-      type: 'text',
-      name: 'permissions',
-      message: 'Permissions (comma separated)',
-      initial: selectedTemplate === 'webview' ? 'INTERNET' : ''
-    });
-  }
-
-  if (!cliOptions.icon) {
-    questions.push({
-      type: 'text',
-      name: 'icon',
-      message: 'Icon path (leave empty for generated icon)',
-      initial: ''
-    });
-  }
-
-  const signingChoice = await pickSigningOptions(cliOptions);
-
-  const result = questions.length
-    ? await prompts(questions, {
-        onCancel: () => process.exit(1)
-      })
-    : {};
-
-  return {
-    name: cliOptions.name || result.name,
-    package: cliOptions.package || result.package,
-    template: selectedTemplate,
-    minSdk: Number(cliOptions.minSdk ?? result.minSdk ?? DEFAULTS.minSdk),
-    targetSdk: Number(cliOptions.targetSdk ?? result.targetSdk ?? DEFAULTS.targetSdk),
-    compileSdk: Number(cliOptions.compileSdk ?? result.compileSdk ?? DEFAULTS.compileSdk),
-    url: cliOptions.url || result.url || DEFAULTS.webUrl,
-    permissions: cliOptions.permissions || result.permissions || '',
-    icon: cliOptions.icon || result.icon || '',
-    signing: signingChoice
+export async function generateProject(cliOptions = {}) {
+  const pluginBundle = await loadPlugins(process.cwd());
+  const opts = {
+    name: pickFirstDefined(cliOptions.name, DEFAULTS.appName) || DEFAULTS.appName,
+    package: pickFirstDefined(cliOptions.package, DEFAULTS.packageName) || DEFAULTS.packageName,
+    template: pickFirstDefined(cliOptions.template, DEFAULTS.template) || DEFAULTS.template,
+    minSdk: Number(pickFirstDefined(cliOptions.minSdk, DEFAULTS.minSdk)),
+    targetSdk: Number(pickFirstDefined(cliOptions.targetSdk, DEFAULTS.targetSdk)),
+    compileSdk: Number(pickFirstDefined(cliOptions.compileSdk, DEFAULTS.compileSdk)),
+    url: pickFirstDefined(cliOptions.url, DEFAULTS.webUrl) || DEFAULTS.webUrl,
+    permissions: pickFirstDefined(cliOptions.permissions, "") || "",
+    icon: pickFirstDefined(cliOptions.icon, "") || "",
+    signing: {
+      signingEnabled: normalizeBoolean(cliOptions.signing),
+      keystore: pickFirstDefined(cliOptions.keystore, DEFAULTS.keystoreFile) || DEFAULTS.keystoreFile,
+      keyAlias: pickFirstDefined(cliOptions.keyAlias, DEFAULTS.keystoreAlias) || DEFAULTS.keystoreAlias,
+      storePassword: pickFirstDefined(cliOptions.storePassword, DEFAULTS.keystoreStorePassword) || DEFAULTS.keystoreStorePassword,
+      keyPassword: pickFirstDefined(cliOptions.keyPassword, DEFAULTS.keystoreKeyPassword) || DEFAULTS.keystoreKeyPassword
+    }
   };
-}
 
-export async function generateProject(cliOptions) {
-  const opts = await pickGenerateOptions(cliOptions);
+  let projectName = String(opts.name).trim();
+  let packageName = String(opts.package).trim();
+  let templateName = normalizeTemplateName(opts.template);
 
-  const projectName = String(opts.name).trim();
-  const packageName = String(opts.package).trim();
-  const templateName = String(opts.template).trim().toLowerCase();
+  if (!projectName && !cliOptions.noPrompt) projectName = await promptText("Please enter the project name.", DEFAULTS.appName);
+  if (!packageName && !cliOptions.noPrompt) packageName = await promptText("Please enter the Android package name.", DEFAULTS.packageName);
+  if (!templateName && !cliOptions.noPrompt) templateName = await promptText("Please enter the template name.", DEFAULTS.template);
 
-  if (!projectName) throw new Error('App name is required.');
-  if (!packageName) throw new Error('Package name is required.');
+  if (!projectName) throw new Error("Project name is required.");
+  if (!packageName) throw new Error("Package name is required.");
+  if (!templateName) templateName = DEFAULTS.template;
 
-  const template = getTemplate(templateName);
+  const { template } = await getResolvedTemplate(templateName, pluginBundle.templates);
   if (!template) {
-    throw new Error(
-      `Unknown template "${templateName}". Use webview, pwa, native, game-java, or game-cpp.`
-    );
+    const supported = [...SUPPORTED_TEMPLATES, ...Object.keys(pluginBundle.templates || {})].join(", ");
+    throw new Error(`Unknown template: ${templateName}. Supported templates: ${supported}`);
   }
 
-  const projectDir = path.resolve(process.cwd(), projectName);
-
-  if (await fs.pathExists(projectDir)) {
-    const items = await fs.readdir(projectDir);
-    if (items.length > 0) {
-      throw new Error(`Target directory is not empty: ${projectDir}`);
-    }
+  const projectDir = await resolveProjectDir(projectName);
+  if (await templateExists(projectDir)) {
+    throw new Error(`Project already appears to exist: ${projectDir}`);
   }
 
-  await fs.ensureDir(projectDir);
-
-  const permissions = smartPermissions({
-    templateName,
-    url: opts.url,
-    permissions: opts.permissions
-  });
-
-  const permissionLines = permissions
-    .map((perm) => `    <uses-permission android:name="${perm}" />`)
-    .join('\n');
-
-  const dependencyLines = uniq(template.dependencies || [])
-    .map((dep) => `    implementation '${dep}'`)
-    .join('\n');
+  await fs.mkdir(projectDir, { recursive: true });
 
   const vars = {
     APP_NAME: projectName,
@@ -278,44 +143,90 @@ export async function generateProject(cliOptions) {
     TARGET_SDK: opts.targetSdk,
     COMPILE_SDK: opts.compileSdk,
     AGP_VERSION: DEFAULTS.agpVersion,
-    GRADLE_VERSION: DEFAULTS.gradleVersion,
-    JAVA_VERSION: DEFAULTS.javaVersion,
-    WEB_URL: opts.url,
-    PERMISSIONS: permissionLines,
-    ANDROIDX_DEPENDENCIES: dependencyLines,
-    EXTRA_ANDROID_BLOCK: template.extraAndroidBlock || ''
+    KOTLIN_VERSION: DEFAULTS.kotlinVersion,
+    CMAKE_VERSION: DEFAULTS.cmakeVersion,
+    WEB_URL: opts.url || DEFAULTS.webUrl
   };
 
-  const spinner = ora(`Generating ${projectName}`).start();
+  const permissions = smartPermissions({
+    templateName,
+    url: opts.url,
+    permissions: opts.permissions
+  });
 
-  try {
-    await writeTemplateProject(projectDir, template, vars);
-    await ensureLocalProperties(projectDir);
+  const permissionsXml = permissions.length
+    ? permissions.map((p) => `    <uses-permission android:name="${p}" />`).join("\n")
+    : "";
 
-    await generateIcons({
-      projectDir,
-      appName: projectName,
-      iconPath: opts.icon || ''
-    });
+  const context = {
+    projectDir,
+    projectName,
+    packageName,
+    templateName,
+    template,
+    vars,
+    options: opts,
+    plugins: pluginBundle.plugins
+  };
 
-    await writeSigningFiles(projectDir, opts.signing);
+  await runHooks(pluginBundle.hooks.beforeGenerate, context);
 
-    try {
-      await bootstrapGradleWrapper(projectDir, DEFAULTS.gradleVersion);
-    } catch (error) {
-      console.warn(
-        pc.yellow(
-          '\nWrapper bootstrap skipped or failed. Project is generated, but build command may need system Gradle the first time.\n'
-        )
-      );
+  logger.title("JAPKGEN New");
+  logger.info(`Project: ${projectName}`);
+  logger.info(`Template: ${templateName}`);
+  logger.info(`Folder: ${projectDir}`);
+
+  await runHooks(pluginBundle.hooks.beforeWrite, context);
+  await writeTemplateProject(projectDir, template, vars);
+  await runHooks(pluginBundle.hooks.afterWrite, context);
+
+  const manifestPath = path.join(projectDir, "app", "src", "main", "AndroidManifest.xml");
+  let manifest = await fs.readFile(manifestPath, "utf8");
+  manifest = manifest.replace("__PERMISSIONS__", permissionsXml ? `${permissionsXml}
+` : "");
+  await fs.writeFile(manifestPath, manifest, "utf8");
+
+  const buildGradlePath = path.join(projectDir, "build.gradle");
+  let buildGradle = await fs.readFile(buildGradlePath, "utf8");
+  buildGradle = applyTemplate(buildGradle, vars);
+  await fs.writeFile(buildGradlePath, buildGradle, "utf8");
+
+  const settingsPath = path.join(projectDir, "settings.gradle");
+  let settings = await fs.readFile(settingsPath, "utf8");
+  settings = settings.replace("__APP_NAME__", projectName.replace(/'/g, "\'"));
+  await fs.writeFile(settingsPath, settings, "utf8");
+
+  const importantFiles = [
+    "app/build.gradle",
+    "app/src/main/res/values/strings.xml",
+    "README.md",
+    `app/src/main/java/${vars.PACKAGE_PATH}/MainActivity.java`,
+    `app/src/main/kotlin/${vars.PACKAGE_PATH}/MainActivity.kt`,
+    "app/src/main/res/layout/activity_main.xml"
+  ];
+
+  for (const rel of importantFiles) {
+    const filePath = path.join(projectDir, rel);
+    if (await fileExists(filePath)) {
+      let content = await fs.readFile(filePath, "utf8");
+      content = applyTemplate(content, vars);
+      await fs.writeFile(filePath, content, "utf8");
     }
-
-    spinner.succeed(`Project created at ${projectDir}`);
-    console.log(pc.cyan(`Template: ${templateName}`));
-    console.log(pc.green(`Next: cd ${projectName}`));
-    console.log(pc.green(`Build: japkgen build ${projectName}`));
-  } catch (error) {
-    spinner.fail('Generation failed');
-    throw error;
   }
+
+  if (opts.icon) {
+    await generateIcons({ projectDir, appName: projectName, iconPath: opts.icon });
+  } else {
+    await generateIcons({ projectDir, appName: projectName, iconPath: "" });
+  }
+
+  if (opts.signing?.signingEnabled) {
+    await writeSigningFiles(projectDir, opts.signing);
+  }
+
+  await runHooks(pluginBundle.hooks.afterGenerate, context);
+
+  logger.success("Project generated successfully.");
+  logger.note("Next steps: open the project folder and run `japkgen serve` or `japkgen build`.");
+  return { projectDir, templateName, packageName, projectName };
 }

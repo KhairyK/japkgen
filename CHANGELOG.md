@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-05-6
+
+### Added
+- New **Create keystore**
+- New **Serve Mode**
+- New **Analyzer APK**
+- New **Kotlin template**
+- New **Plugins system for custom template and logic**
+
 ## [1.1.0] - 2026-05-1
 
 ### Added
@@ -62,8 +71,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Upcoming
 
 ### Planned
-- Kotlin template support
 - Jetpack Compose template
 - Plugin system for custom templates
 - Better environment auto-detection
-- Interactive UI (TUI mode)
