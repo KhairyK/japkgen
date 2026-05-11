@@ -1422,13 +1422,16 @@ public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Cal
 
 function gameCppTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
+
   const readme = makeReadme({
     appName: "__APP_NAME__",
     templateTitle: "Game (C/C++)",
-    templateSummary: "A native C/C++ game starter using CMake and JNI integration.",
-    templateNotes: `- JNI bridge included
-- CMake support is pre-wired
-- A clean baseline for native engine experiments`
+    templateSummary:
+      "A native C/C++ game starter with a safe JNI bridge, fixed-step update loop, and CMake integration.",
+    templateNotes: `- C++17 baseline with guarded JNI entry points
+- Fixed-timestep game loop for stable updates
+- ASCII renderer included for quick validation
+- Clean structure for future OpenGL ES or SDL integration`
   });
 
   return {
@@ -1440,75 +1443,585 @@ function gameCppTemplate() {
             path "src/main/cpp/CMakeLists.txt"
             version "__CMAKE_VERSION__"
         }
-    }`,
-      layoutXml: `<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    }
+
+    ndkVersion "__NDK_VERSION__"`,
+      layoutXml: `<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:fillViewport="true"
+    android:padding="16dp">
 
-    <TextView
-        android:id="@+id/title"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Loading..."
-        android:textSize="28sp"
-        android:textStyle="bold" />
+        android:orientation="vertical">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Native C/C++ starter template"
-        android:textSize="16sp" />
-</LinearLayout>
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:text="Loading..."
+            android:textSize="14sp"
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Controls: DPAD / Arrow Keys. This template renders a native ASCII game loop."
+            android:textSize="14sp" />
+    </LinearLayout>
+</ScrollView>
 `,
       activitySource: `package __PACKAGE__;
 
 import android.os.Bundle;
+import android.os.SystemClock;
+import android.view.KeyEvent;
 import android.widget.TextView;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final int DIR_UP = 0;
+    private static final int DIR_DOWN = 1;
+    private static final int DIR_LEFT = 2;
+    private static final int DIR_RIGHT = 3;
 
     static {
         System.loadLibrary("native-lib");
     }
 
-    private native String getNativeTitle();
+    private TextView titleView;
+    private boolean running = false;
+    private long lastFrameMs = 0L;
+
+    private final Runnable frameTicker = new Runnable() {
+        @Override
+        public void run() {
+            if (!running) {
+                return;
+            }
+
+            long now = SystemClock.uptimeMillis();
+            float deltaSeconds = lastFrameMs == 0L ? 0.0f : (now - lastFrameMs) / 1000.0f;
+            lastFrameMs = now;
+
+            nativeUpdate(deltaSeconds);
+            if (titleView != null) {
+                titleView.setText(nativeRender());
+            }
+
+            if (nativeIsGameOver()) {
+                running = false;
+                return;
+            }
+
+            titleView.postDelayed(this, 16L);
+        }
+    };
+
+    private native void nativeInit(int width, int height, int seed);
+    private native void nativeReset();
+    private native void nativeSetDirection(int direction);
+    private native void nativeUpdate(float deltaSeconds);
+    private native String nativeRender();
+    private native boolean nativeIsGameOver();
+    private native int nativeGetScore();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        TextView title = findViewById(R.id.title);
-        title.setText(getNativeTitle());
+        titleView = findViewById(R.id.title);
+
+        nativeInit(24, 18, (int) SystemClock.uptimeMillis());
+        titleView.setText(nativeRender());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startLoop();
+    }
+
+    @Override
+    protected void onPause() {
+        stopLoop();
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopLoop();
+        nativeReset();
+        super.onDestroy();
+    }
+
+    private void startLoop() {
+        if (running) {
+            return;
+        }
+        running = true;
+        lastFrameMs = 0L;
+        titleView.removeCallbacks(frameTicker);
+        titleView.post(frameTicker);
+    }
+
+    private void stopLoop() {
+        running = false;
+        if (titleView != null) {
+            titleView.removeCallbacks(frameTicker);
+        }
+    }
+
+    private void restartGame() {
+        nativeReset();
+        if (titleView != null) {
+            titleView.setText(nativeRender());
+        }
+        startLoop();
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_DPAD_UP:
+            case KeyEvent.KEYCODE_W:
+                nativeSetDirection(DIR_UP);
+                return true;
+
+            case KeyEvent.KEYCODE_DPAD_DOWN:
+            case KeyEvent.KEYCODE_S:
+                nativeSetDirection(DIR_DOWN);
+                return true;
+
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+            case KeyEvent.KEYCODE_A:
+                nativeSetDirection(DIR_LEFT);
+                return true;
+
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+            case KeyEvent.KEYCODE_D:
+                nativeSetDirection(DIR_RIGHT);
+                return true;
+
+            case KeyEvent.KEYCODE_ENTER:
+            case KeyEvent.KEYCODE_SPACE:
+                if (nativeIsGameOver()) {
+                    restartGame();
+                    return true;
+                }
+                return super.onKeyDown(keyCode, event);
+
+            default:
+                return super.onKeyDown(keyCode, event);
+        }
     }
 }
 `,
       extraFiles: {
         "app/src/main/cpp/CMakeLists.txt": `cmake_minimum_required(VERSION __CMAKE_VERSION__)
 
-project("japkgen_game")
+project("japkgen_game" LANGUAGES CXX)
 
 add_library(native-lib SHARED
         native-lib.cpp)
 
-find_library(log-lib
-        log)
+target_compile_features(native-lib PRIVATE cxx_std_17)
+
+target_compile_options(native-lib PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic)
+
+find_library(log_lib log)
 
 target_link_libraries(native-lib
-        ${log-lib})
+        \${log_lib})
 `,
         "app/src/main/cpp/native-lib.cpp": `#include <jni.h>
-#include <string>
 
-extern "C"
-JNIEXPORT jstring JNICALL
-Java___PACKAGE_JNI___MainActivity_getNativeTitle(JNIEnv *env, jobject /* thiz */) {
-    std::string title = "__APP_NAME__ Native Engine";
-    return env->NewStringUTF(title.c_str());
+#include <algorithm>
+#include <cstdint>
+#include <deque>
+#include <memory>
+#include <mutex>
+#include <random>
+#include <string>
+#include <vector>
+
+#ifdef __ANDROID__
+#include <android/log.h>
+#define LOG_TAG "JAPKGEN_GAME"
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+#else
+#define LOGE(...)
+#endif
+
+namespace nativegame {
+
+enum class Direction : std::uint8_t {
+    Up = 0,
+    Down = 1,
+    Left = 2,
+    Right = 3
+};
+
+struct Point {
+    int x = 0;
+    int y = 0;
+
+    friend bool operator==(const Point& a, const Point& b) noexcept {
+        return a.x == b.x && a.y == b.y;
+    }
+};
+
+class SnakeGame final {
+public:
+    SnakeGame(int width, int height, std::uint32_t seed)
+        : width_(clampSize(width)),
+          height_(clampSize(height)),
+          rng_(seed ? seed : std::random_device{}()) {
+        reset();
+    }
+
+    void reset() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        gameOver_ = false;
+        score_ = 0;
+        direction_ = Direction::Right;
+        nextDirection_ = Direction::Right;
+        accumulator_ = 0.0f;
+        snake_.clear();
+
+        const int cx = width_ / 2;
+        const int cy = height_ / 2;
+
+        snake_.push_back({cx - 1, cy});
+        snake_.push_back({cx, cy});
+        snake_.push_back({cx + 1, cy});
+
+        spawnFoodLocked();
+    }
+
+    bool setDirection(Direction dir) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (gameOver_) {
+            return false;
+        }
+
+        if (isReverse(direction_, dir)) {
+            return false;
+        }
+
+        nextDirection_ = dir;
+        return true;
+    }
+
+    void update(float deltaSeconds) {
+        if (deltaSeconds <= 0.0f) {
+            return;
+        }
+
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (gameOver_) {
+            return;
+        }
+
+        accumulator_ += deltaSeconds;
+
+        constexpr float stepTime = 0.14f;
+        constexpr int maxStepsPerFrame = 4;
+
+        int steps = 0;
+        while (accumulator_ >= stepTime && steps < maxStepsPerFrame) {
+            accumulator_ -= stepTime;
+            stepLocked();
+            ++steps;
+
+            if (gameOver_) {
+                break;
+            }
+        }
+    }
+
+    bool isGameOver() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return gameOver_;
+    }
+
+    int score() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return score_;
+    }
+
+    std::string renderText() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        std::string out;
+        out.reserve(static_cast<std::size_t>((width_ + 2) * (height_ + 4)));
+
+        out += "SCORE: ";
+        out += std::to_string(score_);
+        if (gameOver_) {
+            out += "   GAME OVER";
+        }
+        out += "\\n";
+
+        out += '+';
+        for (int x = 0; x < width_; ++x) {
+            out += '-';
+        }
+        out += "+\\n";
+
+        for (int y = 0; y < height_; ++y) {
+            out += '|';
+            for (int x = 0; x < width_; ++x) {
+                const Point p{x, y};
+
+                if (p == food_) {
+                    out += '*';
+                } else if (p == snake_.front()) {
+                    out += '@';
+                } else if (containsSnakeLocked(p)) {
+                    out += 'o';
+                } else {
+                    out += ' ';
+                }
+            }
+            out += "|\\n";
+        }
+
+        out += '+';
+        for (int x = 0; x < width_; ++x) {
+            out += '-';
+        }
+        out += "+\\n";
+        out += "Use DPAD / Arrow Keys. Press Enter or Space to restart after game over.\\n";
+
+        return out;
+    }
+
+private:
+    static int clampSize(int v) noexcept {
+        if (v < 8) return 8;
+        if (v > 64) return 64;
+        return v;
+    }
+
+    static bool isReverse(Direction a, Direction b) noexcept {
+        return (a == Direction::Up && b == Direction::Down) ||
+               (a == Direction::Down && b == Direction::Up) ||
+               (a == Direction::Left && b == Direction::Right) ||
+               (a == Direction::Right && b == Direction::Left);
+    }
+
+    Point nextHeadLocked() const noexcept {
+        Point head = snake_.front();
+        switch (nextDirection_) {
+            case Direction::Up:    --head.y; break;
+            case Direction::Down:  ++head.y; break;
+            case Direction::Left:  --head.x; break;
+            case Direction::Right: ++head.x; break;
+        }
+        return head;
+    }
+
+    bool inBounds(const Point& p) const noexcept {
+        return p.x >= 0 && p.y >= 0 && p.x < width_ && p.y < height_;
+    }
+
+    bool containsSnakeLocked(const Point& p) const noexcept {
+        for (const auto& part : snake_) {
+            if (part == p) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void spawnFoodLocked() {
+        std::vector<Point> empty;
+        empty.reserve(static_cast<std::size_t>(width_ * height_));
+
+        for (int y = 0; y < height_; ++y) {
+            for (int x = 0; x < width_; ++x) {
+                Point p{x, y};
+                if (!containsSnakeLocked(p)) {
+                    empty.push_back(p);
+                }
+            }
+        }
+
+        if (empty.empty()) {
+            gameOver_ = true;
+            return;
+        }
+
+        std::uniform_int_distribution<std::size_t> dist(0, empty.size() - 1);
+        food_ = empty[dist(rng_)];
+    }
+
+    void stepLocked() {
+        direction_ = nextDirection_;
+
+        const Point newHead = nextHeadLocked();
+
+        if (!inBounds(newHead)) {
+            gameOver_ = true;
+            return;
+        }
+
+        const bool willGrow = (newHead == food_);
+        const Point tail = snake_.back();
+
+        for (std::size_t i = 0; i < snake_.size(); ++i) {
+            if (snake_[i] == newHead) {
+                if (!willGrow && i == snake_.size() - 1 && snake_[i] == tail) {
+                    continue;
+                }
+                gameOver_ = true;
+                return;
+            }
+        }
+
+        snake_.push_front(newHead);
+
+        if (willGrow) {
+            ++score_;
+            spawnFoodLocked();
+        } else {
+            snake_.pop_back();
+        }
+    }
+
+private:
+    int width_ = 24;
+    int height_ = 18;
+
+    mutable std::mutex mutex_;
+    std::deque<Point> snake_;
+    Point food_{};
+
+    Direction direction_ = Direction::Right;
+    Direction nextDirection_ = Direction::Right;
+
+    bool gameOver_ = false;
+    int score_ = 0;
+    float accumulator_ = 0.0f;
+
+    std::mt19937 rng_;
+};
+
+} // namespace nativegame
+
+namespace {
+std::mutex g_mutex;
+std::unique_ptr<nativegame::SnakeGame> g_game;
+
+nativegame::Direction fromInt(int value) {
+    switch (value) {
+        case 0: return nativegame::Direction::Up;
+        case 1: return nativegame::Direction::Down;
+        case 2: return nativegame::Direction::Left;
+        case 3: return nativegame::Direction::Right;
+        default: return nativegame::Direction::Right;
+    }
+}
+
+} // namespace
+
+extern "C" JNIEXPORT void JNICALL
+Java___PACKAGE_JNI___MainActivity_nativeInit(JNIEnv*, jobject, jint width, jint height, jint seed) {
+    try {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        g_game = std::make_unique<nativegame::SnakeGame>(
+            static_cast<int>(width),
+            static_cast<int>(height),
+            static_cast<std::uint32_t>(seed)
+        );
+    } catch (...) {
+        LOGE("nativeInit failed");
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java___PACKAGE_JNI___MainActivity_nativeReset(JNIEnv*, jobject) {
+    try {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        if (g_game) {
+            g_game->reset();
+        }
+    } catch (...) {
+        LOGE("nativeReset failed");
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java___PACKAGE_JNI___MainActivity_nativeSetDirection(JNIEnv*, jobject, jint direction) {
+    try {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        if (g_game) {
+            g_game->setDirection(fromInt(direction));
+        }
+    } catch (...) {
+        LOGE("nativeSetDirection failed");
+    }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java___PACKAGE_JNI___MainActivity_nativeUpdate(JNIEnv*, jobject, jfloat deltaSeconds) {
+    try {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        if (g_game) {
+            g_game->update(static_cast<float>(deltaSeconds));
+        }
+    } catch (...) {
+        LOGE("nativeUpdate failed");
+    }
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java___PACKAGE_JNI___MainActivity_nativeRender(JNIEnv* env, jobject) {
+    try {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        if (!g_game) {
+            return env->NewStringUTF("Game not initialized.\\n");
+        }
+
+        const std::string frame = g_game->renderText();
+        return env->NewStringUTF(frame.c_str());
+    } catch (...) {
+        LOGE("nativeRender failed");
+        return env->NewStringUTF("Render error.\\n");
+    }
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java___PACKAGE_JNI___MainActivity_nativeIsGameOver(JNIEnv*, jobject) {
+    try {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        return (g_game && g_game->isGameOver()) ? JNI_TRUE : JNI_FALSE;
+    } catch (...) {
+        LOGE("nativeIsGameOver failed");
+        return JNI_TRUE;
+    }
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java___PACKAGE_JNI___MainActivity_nativeGetScore(JNIEnv*, jobject) {
+    try {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        return g_game ? g_game->score() : 0;
+    } catch (...) {
+        LOGE("nativeGetScore failed");
+        return 0;
+    }
 }
 `
       },
