@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import process from "node:process";
 
 import { DEFAULTS, SUPPORTED_TEMPLATES } from "./constants.js";
+import { loadProjectConfig } from "./config.js";
 import { getTemplate, BUILTIN_TEMPLATES } from "./templates.js";
 import { generateIcons } from "./icons.js";
 import { logger } from "./logger.js";
@@ -11,6 +12,7 @@ import {
   fileExists,
   hasHttpUrl,
   normalizeBoolean,
+  parseList,
   parsePermissions,
   pickFirstDefined,
   templateExists,
@@ -54,14 +56,18 @@ function normalizeTemplateName(name) {
   return String(name || "").trim().toLowerCase();
 }
 
+function mergeStrings(...values) {
+  return uniq(values.flatMap((value) => parseList(value)));
+}
+
 function smartPermissions({ templateName, url, permissions }) {
   const list = parsePermissions(permissions);
 
-  if (templateName === "webview" || templateName === "pwa") {
+  if (templateName === "webview" || templateName === "pwa" || ["react", "vue", "angular", "preact"].includes(templateName)) {
     list.push("android.permission.INTERNET");
   }
 
-  if (templateName === "webview" && hasHttpUrl(url)) {
+  if ((templateName === "webview" || templateName === "pwa") && hasHttpUrl(url)) {
     list.push("android.permission.ACCESS_NETWORK_STATE");
   }
 
@@ -82,48 +88,67 @@ async function resolveProjectDir(name) {
   return path.resolve(process.cwd(), safeName);
 }
 
-async function getResolvedTemplate(templateName, pluginTemplates = {}) {
-  const mergedRegistry = { ...BUILTIN_TEMPLATES, ...pluginTemplates };
-  const template = getTemplate(templateName, mergedRegistry);
-  return template ? { template, registry: mergedRegistry } : { template: null, registry: mergedRegistry };
+function mergeConfigDefaults(configDefaults = {}, cliOptions = {}) {
+  const defaults = configDefaults || {};
+
+  const signingConfig = defaults.signing && typeof defaults.signing === "object"
+    ? defaults.signing
+    : {};
+
+  return {
+    name: pickFirstDefined(cliOptions.name, defaults.name, DEFAULTS.appName) || DEFAULTS.appName,
+    package: pickFirstDefined(cliOptions.package, defaults.package, defaults.packageName, DEFAULTS.packageName) || DEFAULTS.packageName,
+    template: normalizeTemplateName(pickFirstDefined(cliOptions.template, defaults.template, DEFAULTS.template) || DEFAULTS.template),
+    minSdk: Number(pickFirstDefined(cliOptions.minSdk, defaults.minSdk, DEFAULTS.minSdk)),
+    targetSdk: Number(pickFirstDefined(cliOptions.targetSdk, defaults.targetSdk, DEFAULTS.targetSdk)),
+    compileSdk: Number(pickFirstDefined(cliOptions.compileSdk, defaults.compileSdk, DEFAULTS.compileSdk)),
+    url: pickFirstDefined(cliOptions.url, defaults.url, DEFAULTS.webUrl) || DEFAULTS.webUrl,
+    permissions: mergeStrings(defaults.permissions, cliOptions.permissions).join(","),
+    icon: pickFirstDefined(cliOptions.icon, defaults.icon, "") || "",
+    signing: {
+      signingEnabled: normalizeBoolean(
+        pickFirstDefined(cliOptions.signing, defaults.signing, signingConfig.enabled, signingConfig.signingEnabled),
+        false
+      ),
+      keystore: pickFirstDefined(cliOptions.keystore, defaults.keystore, signingConfig.keystore, DEFAULTS.keystoreFile) || DEFAULTS.keystoreFile,
+      keyAlias: pickFirstDefined(cliOptions.keyAlias, defaults.keyAlias, signingConfig.keyAlias, DEFAULTS.keystoreAlias) || DEFAULTS.keystoreAlias,
+      storePassword: pickFirstDefined(cliOptions.storePassword, defaults.storePassword, signingConfig.storePassword, DEFAULTS.keystoreStorePassword) || DEFAULTS.keystoreStorePassword,
+      keyPassword: pickFirstDefined(cliOptions.keyPassword, defaults.keyPassword, signingConfig.keyPassword, DEFAULTS.keystoreKeyPassword) || DEFAULTS.keystoreKeyPassword
+    }
+  };
+}
+
+function resolveTemplateRegistry(pluginTemplates = {}, configTemplates = {}) {
+  return { ...BUILTIN_TEMPLATES, ...configTemplates, ...pluginTemplates };
+}
+
+async function getResolvedTemplate(templateName, registry = {}) {
+  const template = getTemplate(templateName, registry);
+  return template ? { template, registry } : { template: null, registry };
 }
 
 export async function generateProject(cliOptions = {}) {
+  const projectConfig = await loadProjectConfig(process.cwd());
   const pluginBundle = await loadPlugins(process.cwd());
-  const opts = {
-    name: pickFirstDefined(cliOptions.name, DEFAULTS.appName) || DEFAULTS.appName,
-    package: pickFirstDefined(cliOptions.package, DEFAULTS.packageName) || DEFAULTS.packageName,
-    template: pickFirstDefined(cliOptions.template, DEFAULTS.template) || DEFAULTS.template,
-    minSdk: Number(pickFirstDefined(cliOptions.minSdk, DEFAULTS.minSdk)),
-    targetSdk: Number(pickFirstDefined(cliOptions.targetSdk, DEFAULTS.targetSdk)),
-    compileSdk: Number(pickFirstDefined(cliOptions.compileSdk, DEFAULTS.compileSdk)),
-    url: pickFirstDefined(cliOptions.url, DEFAULTS.webUrl) || DEFAULTS.webUrl,
-    permissions: pickFirstDefined(cliOptions.permissions, "") || "",
-    icon: pickFirstDefined(cliOptions.icon, "") || "",
-    signing: {
-      signingEnabled: normalizeBoolean(cliOptions.signing),
-      keystore: pickFirstDefined(cliOptions.keystore, DEFAULTS.keystoreFile) || DEFAULTS.keystoreFile,
-      keyAlias: pickFirstDefined(cliOptions.keyAlias, DEFAULTS.keystoreAlias) || DEFAULTS.keystoreAlias,
-      storePassword: pickFirstDefined(cliOptions.storePassword, DEFAULTS.keystoreStorePassword) || DEFAULTS.keystoreStorePassword,
-      keyPassword: pickFirstDefined(cliOptions.keyPassword, DEFAULTS.keystoreKeyPassword) || DEFAULTS.keystoreKeyPassword
-    }
-  };
+  const configDefaults = projectConfig.defaults || {};
+  const opts = mergeConfigDefaults(configDefaults, cliOptions);
+  const registry = resolveTemplateRegistry(pluginBundle.templates, projectConfig.templates);
 
   let projectName = String(opts.name).trim();
   let packageName = String(opts.package).trim();
   let templateName = normalizeTemplateName(opts.template);
 
-  if (!projectName && !cliOptions.noPrompt) projectName = await promptText("Please enter the project name.", DEFAULTS.appName);
-  if (!packageName && !cliOptions.noPrompt) packageName = await promptText("Please enter the Android package name.", DEFAULTS.packageName);
-  if (!templateName && !cliOptions.noPrompt) templateName = await promptText("Please enter the template name.", DEFAULTS.template);
+  if (!projectName && !cliOptions.noPrompt) projectName = await promptText("Please enter the project name.", String(configDefaults.name || DEFAULTS.appName));
+  if (!packageName && !cliOptions.noPrompt) packageName = await promptText("Please enter the Android package name.", String(configDefaults.package || configDefaults.packageName || DEFAULTS.packageName));
+  if (!templateName && !cliOptions.noPrompt) templateName = await promptText("Please enter the template name.", String(configDefaults.template || DEFAULTS.template));
 
   if (!projectName) throw new Error("Project name is required.");
   if (!packageName) throw new Error("Package name is required.");
   if (!templateName) templateName = DEFAULTS.template;
 
-  const { template } = await getResolvedTemplate(templateName, pluginBundle.templates);
+  const { template } = await getResolvedTemplate(templateName, registry);
   if (!template) {
-    const supported = [...SUPPORTED_TEMPLATES, ...Object.keys(pluginBundle.templates || {})].join(", ");
+    const supported = [...SUPPORTED_TEMPLATES, ...Object.keys(registry || {})].sort().join(", ");
     throw new Error(`Unknown template: ${templateName}. Supported templates: ${supported}`);
   }
 
@@ -166,7 +191,9 @@ export async function generateProject(cliOptions = {}) {
     template,
     vars,
     options: opts,
-    plugins: pluginBundle.plugins
+    plugins: pluginBundle.plugins,
+    config: projectConfig,
+    registry
   };
 
   await runHooks(pluginBundle.hooks.beforeGenerate, context);
@@ -175,6 +202,9 @@ export async function generateProject(cliOptions = {}) {
   logger.info(`Project: ${projectName}`);
   logger.info(`Template: ${templateName}`);
   logger.info(`Folder: ${projectDir}`);
+  if (projectConfig.path) {
+    logger.note(`Config file: ${path.basename(projectConfig.path)}`);
+  }
 
   await runHooks(pluginBundle.hooks.beforeWrite, context);
   await writeTemplateProject(projectDir, template, vars);
@@ -182,8 +212,7 @@ export async function generateProject(cliOptions = {}) {
 
   const manifestPath = path.join(projectDir, "app", "src", "main", "AndroidManifest.xml");
   let manifest = await fs.readFile(manifestPath, "utf8");
-  manifest = manifest.replace("__PERMISSIONS__", permissionsXml ? `${permissionsXml}
-` : "");
+  manifest = manifest.replace("__PERMISSIONS__", permissionsXml ? `${permissionsXml}\n` : "");
   await fs.writeFile(manifestPath, manifest, "utf8");
 
   const buildGradlePath = path.join(projectDir, "build.gradle");
@@ -193,7 +222,7 @@ export async function generateProject(cliOptions = {}) {
 
   const settingsPath = path.join(projectDir, "settings.gradle");
   let settings = await fs.readFile(settingsPath, "utf8");
-  settings = settings.replace("__APP_NAME__", projectName.replace(/'/g, "\'"));
+  settings = settings.replace("__APP_NAME__", projectName.replace(/'/g, "\\'"));
   await fs.writeFile(settingsPath, settings, "utf8");
 
   const importantFiles = [
@@ -201,6 +230,7 @@ export async function generateProject(cliOptions = {}) {
     "app/src/main/res/values/strings.xml",
     "README.md",
     `app/src/main/java/${vars.PACKAGE_PATH}/MainActivity.java`,
+    `app/src/main/java/${vars.PACKAGE_PATH}/MainActivity.kt`,
     `app/src/main/kotlin/${vars.PACKAGE_PATH}/MainActivity.kt`,
     "app/src/main/res/layout/activity_main.xml"
   ];
@@ -214,11 +244,7 @@ export async function generateProject(cliOptions = {}) {
     }
   }
 
-  if (opts.icon) {
-    await generateIcons({ projectDir, appName: projectName, iconPath: opts.icon });
-  } else {
-    await generateIcons({ projectDir, appName: projectName, iconPath: "" });
-  }
+  await generateIcons({ projectDir, appName: projectName, iconPath: opts.icon || "" });
 
   if (opts.signing?.signingEnabled) {
     await writeSigningFiles(projectDir, opts.signing);

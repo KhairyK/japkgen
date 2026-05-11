@@ -22,7 +22,7 @@ async function runVersionCheck(command, args) {
 }
 
 export async function detectEnvironment() {
-  const sdkRoot =
+  const sdkRootCandidate =
     process.env.ANDROID_SDK_ROOT ||
     process.env.ANDROID_HOME ||
     (await fileExistsAny(getDefaultAndroidSdkPaths()));
@@ -33,21 +33,30 @@ export async function detectEnvironment() {
     node: process.version,
     cwd: process.cwd(),
     home: os.homedir(),
+    javaHome: process.env.JAVA_HOME || null,
+    androidHome: process.env.ANDROID_HOME || null,
+    androidSdkRoot: process.env.ANDROID_SDK_ROOT || null,
+    packageManagers: {
+      npm: await runVersionCheck("npm", ["--version"]),
+      pnpm: await runVersionCheck("pnpm", ["--version"]),
+      yarn: await runVersionCheck("yarn", ["--version"])
+    },
     java: await runVersionCheck("java", ["-version"]),
     gradle: await runVersionCheck("gradle", ["-v"]),
     adb: await runVersionCheck("adb", ["version"]),
-    sdkRoot: sdkRoot ? path.resolve(sdkRoot) : null,
+    sdkRoot: sdkRootCandidate ? path.resolve(sdkRootCandidate) : null,
     hasSdkRoot: false,
-    sdkPlatformTools: false,
-    sdkBuildTools: false,
+    sdkPlatformTools: null,
+    sdkBuildTools: null,
     gradleWrapper: false,
-    recommendedJava: DEFAULTS.javaVersion
+    recommendedJava: DEFAULTS.javaVersion,
+    git: await runVersionCheck("git", ["--version"])
   };
 
   if (env.sdkRoot) {
     env.hasSdkRoot = true;
-    env.sdkPlatformTools = await fileExistsAny([path.join(env.sdkRoot, "platform-tools")]);
-    env.sdkBuildTools = await fileExistsAny([path.join(env.sdkRoot, "build-tools")]);
+    env.sdkPlatformTools = (await fileExistsAny([path.join(env.sdkRoot, "platform-tools")])) || null;
+    env.sdkBuildTools = (await fileExistsAny([path.join(env.sdkRoot, "build-tools")])) || null;
   }
 
   return env;

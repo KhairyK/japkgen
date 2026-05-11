@@ -5,5 +5,4 @@ node_modules/
 tmp/
 webpage/
 *.log
-notice-gen
-APPENDIX
+examples/

@@ -16,12 +16,12 @@ async function bootstrapGradleWrapper(projectDir, gradleVersion) {
   if (await templateExists(projectDir)) return true;
   const gradleExists = await runCommand(process.platform === "win32" ? "gradle.bat" : "gradle", ["-v"], { reject: false });
   if (!gradleExists.ok) {
-    throw new Error("Gradle global tidak ditemukan, jadi wrapper belum bisa di-bootstrap otomatis.");
+    throw new Error("Global Gradle not found, cannot bootstrap wrapper automatically.");
   }
   const cmd = process.platform === "win32" ? "gradle.bat" : "gradle";
   const args = ["wrapper", "--gradle-version", String(gradleVersion || DEFAULTS.gradleVersion), "--distribution-type", "bin"];
   const result = await runCommand(cmd, args, { cwd: projectDir, stdio: "inherit", reject: false });
-  if (!result.ok) throw new Error(result.stderr || result.stdout || "Gagal bootstrap Gradle wrapper.");
+  if (!result.ok) throw new Error(result.stderr || result.stdout || "failed to bootstrap Gradle wrapper.");
   return true;
 }
 
@@ -41,7 +41,7 @@ export async function buildProject(projectDirArg, buildOptions = {}) {
   await ensureLocalProperties(projectDir);
 
   if (!(await templateExists(projectDir))) {
-    logger.warn("Gradle wrapper belum ditemukan. Coba bootstrap dulu...");
+    logger.warn("Gradle wrapper not found. Trying to bootstrap...");
     await bootstrapGradleWrapper(projectDir, buildOptions.gradleVersion || DEFAULTS.gradleVersion);
   }
 

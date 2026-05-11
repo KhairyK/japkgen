@@ -3,8 +3,10 @@ import process from "node:process";
 import path from "node:path";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
+import pc from "picocolors";
 
 import { DEFAULTS, SUPPORTED_TEMPLATES } from "./constants.js";
+import { loadProjectConfig } from "./config.js";
 import { logger } from "./logger.js";
 import { generateProject } from "./generator.js";
 import { buildProject } from "./build.js";
@@ -15,57 +17,68 @@ import { runProjectTests } from "./test.js";
 import { analyzeApk } from "./analyze.js";
 import { normalizeBoolean } from "./utils.js";
 
-const VERSION = "1.2.0";
+const VERSION = "2.0.0";
 const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY);
 const rl = interactive ? readline.createInterface({ input, output }) : null;
+const YEAR = new Date().getFullYear();
 
 const TEMPLATES = [...SUPPORTED_TEMPLATES];
 
+
 function usage() {
-  console.log(`
-JAPK Generator ${VERSION}
+console.log(`
+${pc.bold(pc.cyan("JAPK Generator"))} ${pc.green(VERSION)}
 
-Usage:
-  japkgen new [options]
-  japkgen build [projectDir] [options]
-  japkgen doctor
-  japkgen serve [projectDir] [options]
-  japkgen keystore create [options]
-  japkgen test [projectDir]
-  japkgen analyze <file.apk>
+${pc.bold(pc.yellow("Usage:"))}
+  ${pc.cyan("japkgen")} ${pc.green("new")} [options]
+  ${pc.cyan("japkgen")} ${pc.green("build")} [projectDir] [options]
+  ${pc.cyan("japkgen")} ${pc.green("doctor")}
+  ${pc.cyan("japkgen")} ${pc.green("serve")} [projectDir] [options]
+  ${pc.cyan("japkgen")} ${pc.green("keystore")} create [options]
+  ${pc.cyan("japkgen")} ${pc.green("test")} [projectDir]
+  ${pc.cyan("japkgen")} ${pc.green("analyze")} <file.apk>
 
-Commands:
-  new         Generate a new Android project
-  build       Build an Android project
-  doctor      Check environment readiness
-  serve       Start a friendly static preview server
-  keystore    Create a release keystore
-  test        Validate generated project structure
-  analyze     Inspect APK contents
+${pc.bold(pc.yellow("Commands:"))}
+  ${pc.green("new")}         ${pc.dim("Generate a new Android project")}
+  ${pc.green("build")}       ${pc.dim("Build an Android project")}
+  ${pc.green("doctor")}      ${pc.dim("Check environment readiness")}
+  ${pc.green("serve")}       ${pc.dim("Start a static preview server")}
+  ${pc.green("keystore")}    ${pc.dim("Create a release keystore")}
+  ${pc.green("test")}        ${pc.dim("Validate generated project structure")}
+  ${pc.green("analyze")}     ${pc.dim("Inspect APK contents")}
 
-Templates:
-  ${TEMPLATES.join("\n  ")}
+${pc.bold(pc.yellow("Templates:"))}
+  ${TEMPLATES.map((t) => pc.magenta(t)).join("\n  ")}
 
-Notes:
-  If required values are omitted, the CLI will ask you interactively.
+${pc.bold(pc.yellow("Config file:"))}
+  ${pc.dim(
+    "The CLI reads japkgen.config.json, japkgen.config.mjs, or japkgen.config.js from the current directory."
+  )}
 
-Options:
-  --name <name>
-  --package <package>
-  --template <template>
-  --min-sdk <number>
-  --target-sdk <number>
-  --compile-sdk <number>
-  --url <url>
-  --permissions <list>
-  --icon <path>
-  --signing
-  --keystore <path>
-  --key-alias <alias>
-  --store-password <password>
-  --key-password <password>
+${pc.bold(pc.yellow("Notes:"))}
+  ${pc.dim(
+    "If required values are omitted, the CLI will ask you interactively."
+  )}
+
+${pc.bold(pc.yellow("Options:"))}
+  ${pc.cyan("--name")} <name>
+  ${pc.cyan("--package")} <package>
+  ${pc.cyan("--template")} <template>
+  ${pc.cyan("--min-sdk")} <number>
+  ${pc.cyan("--target-sdk")} <number>
+  ${pc.cyan("--compile-sdk")} <number>
+  ${pc.cyan("--url")} <url>
+  ${pc.cyan("--permissions")} <list>
+  ${pc.cyan("--icon")} <path>
+  ${pc.cyan("--signing")}
+  ${pc.cyan("--keystore")} <path>
+  ${pc.cyan("--key-alias")} <alias>
+  ${pc.cyan("--store-password")} <password>
+  ${pc.cyan("--key-password")} <password>
 `);
-process.exit(0);
+console.warn(pc.yellow(`Warning: JAPK Generator ${VERSION} is in early beta. Please review the generated code and provide feedback.
+${YEAR} (C) OpenDN Foundation.`));
+  process.exit(0);
 }
 
 function parseFlags(argv) {
@@ -170,39 +183,59 @@ async function askChoice(question, choices, defaultValue) {
   }
 }
 
-async function promptNewOptions(options) {
-  const name = String(options.name ?? (await askRequired("Please enter the project name."))).trim();
+async function promptNewOptions(options, configDefaults = {}) {
+  const defaultName = configDefaults.name || DEFAULTS.appName;
+  const defaultPackage = configDefaults.package || configDefaults.packageName || DEFAULTS.packageName;
+  const defaultTemplate = configDefaults.template || DEFAULTS.template;
+  const defaultMinSdk = configDefaults.minSdk ?? DEFAULTS.minSdk;
+  const defaultTargetSdk = configDefaults.targetSdk ?? DEFAULTS.targetSdk;
+  const defaultCompileSdk = configDefaults.compileSdk ?? DEFAULTS.compileSdk;
+  const defaultUrl = configDefaults.url || DEFAULTS.webUrl;
+  const defaultPermissions = Array.isArray(configDefaults.permissions)
+    ? configDefaults.permissions.join(",")
+    : String(configDefaults.permissions || "");
+  const defaultIcon = configDefaults.icon || "";
+  const signingDefaults = configDefaults.signing && typeof configDefaults.signing === "object" ? configDefaults.signing : {};
+
+  const name = String(options.name ?? (await askRequired("Please enter the project name.", defaultName))).trim();
   const packageName = String(
-    options.package ?? (await askRequired("Please enter the Android package name.", DEFAULTS.packageName))
+    options.package ?? (await askRequired("Please enter the Android package name.", defaultPackage))
   ).trim();
 
   let template = String(options.template ?? "").trim().toLowerCase();
   if (!template) {
     template = String(
-      await askChoice("Please select a project template.", TEMPLATES, DEFAULTS.template)
+      await askChoice("Please select a project template.", TEMPLATES, defaultTemplate)
     ).trim().toLowerCase();
   }
 
   const minSdk = Number(
-    options.minSdk ?? (await ask("Please enter the minimum SDK level.", String(DEFAULTS.minSdk)))
+    options.minSdk ?? (await ask("Please enter the minimum SDK level.", String(defaultMinSdk)))
   );
   const targetSdk = Number(
-    options.targetSdk ?? (await ask("Please enter the target SDK level.", String(DEFAULTS.targetSdk)))
+    options.targetSdk ?? (await ask("Please enter the target SDK level.", String(defaultTargetSdk)))
   );
   const compileSdk = Number(
-    options.compileSdk ?? (await ask("Please enter the compile SDK level.", String(DEFAULTS.compileSdk)))
+    options.compileSdk ?? (await ask("Please enter the compile SDK level.", String(defaultCompileSdk)))
   );
 
   const url = String(options.url ?? "").trim();
-  const finalUrl = url || (template === "webview" || template === "pwa" ? String(await askRequired("Please enter the application URL.", DEFAULTS.webUrl)).trim() : "");
+  const finalUrl = url || (template === "webview" || template === "pwa"
+    ? String(await askRequired("Please enter the application URL.", defaultUrl)).trim()
+    : "");
 
-  const permissionsInput = String(options.permissions ?? "").trim();
-  const icon = String(options.icon ?? (await ask("Please enter the icon path.", ""))).trim();
+  const permissionsInput = String(options.permissions ?? defaultPermissions).trim();
+  const icon = String(options.icon ?? (await ask("Please enter the icon path.", defaultIcon))).trim();
+
+  const signingDefaultValue =
+    typeof configDefaults.signing === "boolean"
+      ? configDefaults.signing
+      : normalizeBoolean(signingDefaults.enabled ?? signingDefaults.signingEnabled, false);
 
   const signing =
     options.signing !== undefined
       ? normalizeBoolean(options.signing)
-      : await askYesNo("Would you like to enable signing scaffolding?", false);
+      : await askYesNo("Would you like to enable signing scaffolding?", signingDefaultValue);
 
   return {
     name,
@@ -218,52 +251,56 @@ async function promptNewOptions(options) {
   };
 }
 
-async function promptBuildOptions(projectDirArg, options) {
+async function promptBuildOptions(projectDirArg, options, configDefaults = {}) {
   const projectDir = path.resolve(
-    projectDirArg ?? options.projectDir ?? (await ask("Please enter the project directory.", process.cwd()))
+    projectDirArg ?? options.projectDir ?? configDefaults.projectDir ?? (await ask("Please enter the project directory.", process.cwd()))
   );
 
   const variant =
     options.variant ??
+    configDefaults.variant ??
     (await askChoice("Please select a build variant.", ["debug", "release"], DEFAULTS.variant));
 
   const gradleVersion = String(
     options.gradleVersion ??
+      configDefaults.gradleVersion ??
       (await ask("Please enter the Gradle version.", String(DEFAULTS.gradleVersion)))
   ).trim();
 
   return { projectDir, variant, gradleVersion };
 }
 
-async function promptServeOptions(projectDirArg, options) {
+async function promptServeOptions(projectDirArg, options, configDefaults = {}) {
   const projectDir = path.resolve(
-    projectDirArg ?? options.projectDir ?? (await ask("Please enter the project directory.", process.cwd()))
+    projectDirArg ?? options.projectDir ?? configDefaults.projectDir ?? (await ask("Please enter the project directory.", process.cwd()))
   );
 
-  const port = Number(options.port ?? (await ask("Please enter the server port.", String(DEFAULTS.servePort))));
+  const port = Number(
+    options.port ?? configDefaults.port ?? (await ask("Please enter the server port.", String(DEFAULTS.servePort)))
+  );
   const watch =
     options.watch !== undefined
       ? normalizeBoolean(options.watch, true)
-      : await askYesNo("Would you like to enable file watching?", true);
+      : await askYesNo("Would you like to enable file watching?", configDefaults.watch ?? true);
 
   return { projectDir, port, watch };
 }
 
-async function promptKeystoreOptions(options) {
+async function promptKeystoreOptions(options, configDefaults = {}) {
   const keystorePath = path.resolve(
-    options.path ?? options.keystore ?? (await ask("Please enter the keystore file path.", DEFAULTS.keystoreFile))
+    options.path ?? options.keystore ?? configDefaults.keystore ?? (await ask("Please enter the keystore file path.", DEFAULTS.keystoreFile))
   );
 
   const alias = sanitizeAlias(
-    String(options.alias ?? (await ask("Please enter the key alias.", DEFAULTS.keystoreAlias))).trim()
+    String(options.alias ?? configDefaults.keyAlias ?? (await ask("Please enter the key alias.", DEFAULTS.keystoreAlias))).trim()
   );
 
   const storePassword = String(
-    options.storePassword ?? (await ask("Please enter the keystore password.", DEFAULTS.keystoreStorePassword))
+    options.storePassword ?? configDefaults.storePassword ?? (await ask("Please enter the keystore password.", DEFAULTS.keystoreStorePassword))
   ).trim();
 
   const keyPassword = String(
-    options.keyPassword ?? (await ask("Please enter the key password.", DEFAULTS.keystoreKeyPassword))
+    options.keyPassword ?? configDefaults.keyPassword ?? (await ask("Please enter the key password.", DEFAULTS.keystoreKeyPassword))
   ).trim();
 
   const dname = String(
@@ -286,10 +323,10 @@ async function promptKeystoreOptions(options) {
   };
 }
 
-async function promptTestOptions(projectDirArg) {
+async function promptTestOptions(projectDirArg, configDefaults = {}) {
   return {
     projectDir: path.resolve(
-      projectDirArg ?? (await ask("Please enter the project directory.", process.cwd()))
+      projectDirArg ?? configDefaults.projectDir ?? (await ask("Please enter the project directory.", process.cwd()))
     )
   };
 }
@@ -300,51 +337,53 @@ async function promptAnalyzeOptions(targetArg) {
 }
 
 async function main() {
+  const projectConfig = await loadProjectConfig(process.cwd());
+  const configDefaults = projectConfig.defaults || {};
   const argv = process.argv.slice(2);
   const cmd = argv[0];
 
   if (!cmd || cmd === "--help" || cmd === "-h" || cmd === "help") {
     usage();
-    return;
+    process.exit(0);
   }
 
   if (cmd === "--version" || cmd === "-v" || cmd === "version") {
     console.log(VERSION);
-    return;
+    process.exit(0);
   }
 
   if (cmd === "new" || cmd === "init") {
     const { options } = parseFlags(argv.slice(1));
-    const promptOptions = await promptNewOptions(options);
+    const promptOptions = await promptNewOptions(options, configDefaults);
 
     await generateProject({
       ...promptOptions,
       signing: normalizeBoolean(promptOptions.signing)
     });
-    return;
+    process.exit(0);
   }
 
   if (cmd === "build") {
     const maybeDir = argv[1] && !argv[1].startsWith("-") ? argv[1] : undefined;
     const { options } = parseFlags(argv.slice(maybeDir ? 2 : 1));
-    const { projectDir, variant, gradleVersion } = await promptBuildOptions(maybeDir, options);
+    const { projectDir, variant, gradleVersion } = await promptBuildOptions(maybeDir, options, configDefaults);
 
     await buildProject(projectDir, {
       variant,
       gradleVersion
     });
-    return;
+    process.exit(0);
   }
 
   if (cmd === "doctor") {
     await runDoctor();
-    return;
+    process.exit(0);
   }
 
   if (cmd === "serve") {
     const maybeDir = argv[1] && !argv[1].startsWith("-") ? argv[1] : undefined;
     const { options } = parseFlags(argv.slice(maybeDir ? 2 : 1));
-    const { projectDir, port, watch } = await promptServeOptions(maybeDir, options);
+    const { projectDir, port, watch } = await promptServeOptions(maybeDir, options, configDefaults);
 
     await serveProject(projectDir, { port, watch });
     return;
@@ -359,7 +398,7 @@ async function main() {
       keyPassword,
       dname,
       validityDays
-    } = await promptKeystoreOptions(options);
+    } = await promptKeystoreOptions(options, configDefaults);
 
     const result = await createKeystore({
       keystorePath,
@@ -371,15 +410,15 @@ async function main() {
     });
 
     logger.success(`Keystore created: ${result.keystorePath}`);
-    return;
+    process.exit(0);
   }
 
   if (cmd === "test") {
     const maybeDir = argv[1] && !argv[1].startsWith("-") ? argv[1] : undefined;
-    const { projectDir } = await promptTestOptions(maybeDir);
+    const { projectDir } = await promptTestOptions(maybeDir, configDefaults);
 
     await runProjectTests(projectDir);
-    return;
+    process.exit(0);
   }
 
   if (cmd === "analyze") {
@@ -387,10 +426,13 @@ async function main() {
     const { target } = await promptAnalyzeOptions(targetArg);
 
     await analyzeApk(target);
-    return;
+    process.exit(0);
   }
 
-  throw new Error(`Unknown command: ${cmd}`);
+  throw new Error(`JAPK Generator ${VERSION} | Unknown command: ${cmd}.
+See 'japkgen --help' for usage information.
+    `);
+    process.exit(1);
 }
 
 main()

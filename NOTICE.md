@@ -1,7 +1,6 @@
 # NOTICE
 
 This file lists third-party software used by **japkgen**.
-Optional dependencies are intentionally excluded.
 
 ---
 
