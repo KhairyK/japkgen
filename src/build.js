@@ -1,5 +1,6 @@
 import path from "node:path";
 import { DEFAULTS } from "./constants.js";
+import { debugLog } from "./debug.js";
 import { logger } from "./logger.js";
 import { fileExists, runCommand, templateExists, writeFileEnsured } from "./utils.js";
 
@@ -37,6 +38,7 @@ export async function buildProject(projectDirArg, buildOptions = {}) {
   logger.title("JAPKGEN Build");
   logger.info(`Project: ${projectDir}`);
   logger.info(`Variant: ${variant}`);
+  debugLog("build", "Resolved build options", { projectDir, variant, task });
 
   await ensureLocalProperties(projectDir);
 

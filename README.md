@@ -9,7 +9,9 @@
 [![made with](https://img.shields.io/badge/made%20with-Node.js-339933.svg)](https://nodejs.org/)
 [![contributors welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-JAPKGEN is a modular command-line tool for generating Android application projects with a structured, developer-friendly workflow. It supports project scaffolding, environment diagnostics, WebView applications, smart permission handling, icon generation, release signing setup, and modern frontend templates powered by Vite.
+JAPKGEN is a modular command-line tool for generating Android and hybrid project scaffolds with a structured, developer-friendly workflow. It supports project generation, environment diagnostics, WebView and Web APK templates, native Android templates, C/C++ game scaffolding, release signing setup, and modern frontend templates powered by Vite.
+
+Current beta release: **2.0.0-beta.2**
 
 ## Table of Contents
 
@@ -19,41 +21,47 @@ JAPKGEN is a modular command-line tool for generating Android application projec
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Commands](#commands)
-- [Project Structure](#project-structure)
 - [Templates](#templates)
+- [Project Structure](#project-structure)
 - [Configuration](#configuration)
 - [Environment Detection](#environment-detection)
-- [Smart Dependencies](#smart-dependencies)
-- [Fonts](#fonts)
-- [Signing](#signing)
-- [Icons](#icons)
 - [Development Workflow](#development-workflow)
+- [Testing](#testing)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Overview
 
-JAPKGEN is designed to simplify Android project generation from the command line. The tool focuses on clear defaults, predictable output, and modular templates so that developers can create, inspect, and extend projects with minimal friction.
+JAPKGEN is designed to simplify Android project generation from the command line. The tool focuses on clean defaults, predictable output, and modular templates so developers can create, inspect, and extend projects with minimal friction.
 
 It is suitable for developers who want to scaffold:
 
 - WebView-based Android applications
+- Web APK projects with frontend stacks
 - Native Android applications
 - Kotlin-based projects
 - Jetpack Compose projects
-- Game templates in Java or C++
-- Web-based Android experiences using React, Vue, Angular, or Preact
-- Signed release-ready project structures
-- Projects with automatic environment detection and dependency selection
+- Game templates in Java or C/C++
+- Frontend projects using React, Vue, Angular, or Preact
+- Projects with release signing scaffolding
+- Projects with automatic environment detection and smart dependency selection
 
 ## Features
 
 - Modular CLI architecture
+- Interactive prompts powered by `prompts`
+- Debug-friendly logging output
 - WebView template with improved loading and navigation behavior
+- Web APK template support with:
+  - Tailwind CSS
+  - Material UI
+  - Material Icons / Material Symbols
+  - XML to JSON helper utilities
 - Native Android template for minimal application scaffolding
 - Kotlin template optimized for practical Android development
 - Jetpack Compose template
-- Game templates for Java and C++
+- Game templates for Java and C/C++
+- CMake and Makefile support for native C/C++ workflows
 - React, Vue, Angular, and Preact templates
 - Vite-powered frontend scaffolding
 - Google Fonts CDN integration
@@ -107,6 +115,18 @@ Create a new project:
 
 ```bash
 japkgen new --name MyApp --package com.example.myapp --template webview --url https://example.com
+```
+
+Create a React-based Web APK project:
+
+```bash
+japkgen new --name MyWebApp --package com.example.mywebapp --template react
+```
+
+Create a native C/C++ project:
+
+```bash
+japkgen new --name NativeApp --package com.example.nativeapp --template cpp
 ```
 
 Check your environment:
@@ -176,15 +196,109 @@ Example:
 japkgen doctor
 ```
 
-### `japkgen config`
+### `japkgen serve [projectDir]`
 
-Reads or applies configuration from a project config file when supported by the current workflow.
+Starts a static preview server for the selected project.
 
 Example:
 
 ```bash
-japkgen config
+japkgen serve MyApp --port 3000
 ```
+
+### `japkgen keystore create`
+
+Creates a release keystore and signing scaffold.
+
+Example:
+
+```bash
+japkgen keystore create
+```
+
+### `japkgen test [projectDir]`
+
+Validates a generated project structure and runs project checks.
+
+Example:
+
+```bash
+japkgen test MyApp
+```
+
+### `japkgen analyze <file.apk>`
+
+Inspects APK contents and reports useful metadata.
+
+Example:
+
+```bash
+japkgen analyze ./app-release.apk
+```
+
+## Templates
+
+### WebView
+
+The WebView template is intended for applications that display a website inside a native Android container.
+
+It includes:
+
+* JavaScript support
+* DOM storage support
+* URL navigation handling
+* Basic loading progress feedback
+* Pull-to-refresh support
+* Sensible default permissions when needed
+
+### Web APK
+
+The Web APK template is designed for frontend-driven Android delivery.
+
+It may include:
+
+* Tailwind CSS
+* Material UI
+* Material Icons / Material Symbols
+* XML to JSON helper utilities
+* Vite-based frontend bundling
+* Google Fonts CDN support
+
+### Native
+
+The native template is a minimal Android application scaffold with a clean project layout and practical defaults.
+
+### Kotlin
+
+The Kotlin template is optimized for Kotlin-based Android development with a simple and maintainable entry point.
+
+### Jetpack Compose
+
+The Compose template creates a modern UI-first Android application scaffold using Jetpack Compose dependencies and recommended project settings.
+
+### Game (Java)
+
+The Java game template is suitable for basic custom rendering or canvas-based gameplay scaffolding.
+
+### Game (C/C++)
+
+The C/C++ game template provides a native foundation for projects that need CMake-based or Makefile-based rendering and game workflows.
+
+### React
+
+The React template creates a frontend scaffold powered by Vite and prepared for integration with an Android container.
+
+### Vue
+
+The Vue template creates a modern Vite-based Vue frontend scaffold for Android-integrated workflows.
+
+### Angular
+
+The Angular template creates a TypeScript-first frontend scaffold with Vite optimization for Android-centered delivery.
+
+### Preact
+
+The Preact template creates a lightweight Vite-based frontend scaffold for performance-sensitive apps.
 
 ## Project Structure
 
@@ -197,6 +311,7 @@ MyApp/
 │  │  └─ main/
 │  │     ├─ java/
 │  │     ├─ kotlin/
+│  │     ├─ cpp/
 │  │     ├─ res/
 │  │     └─ AndroidManifest.xml
 │  └─ build.gradle
@@ -215,62 +330,7 @@ MyApp/
 └─ README.md
 ```
 
-Not every template generates the same files. WebView, Compose, game, and frontend templates each produce a structure appropriate for the selected target.
-
-## Templates
-
-### WebView
-
-The WebView template is intended for applications that display a website inside a native Android container.
-
-It includes:
-
-* JavaScript support
-* DOM storage support
-* URL navigation handling
-* Basic loading progress feedback
-* Pull-to-refresh support
-* Sensible default permissions when needed
-
-### Native
-
-The native template is a minimal Android application scaffold with a clean project layout and practical defaults.
-
-### Kotlin
-
-The Kotlin template is optimized for Kotlin-based Android development with a simple and maintainable entry point.
-
-### Jetpack Compose
-
-The Compose template creates a modern UI-first Android application scaffold using Jetpack Compose dependencies and recommended project settings.
-
-### Game (Java)
-
-The Java game template is suitable for basic custom rendering or canvas-based gameplay scaffolding.
-
-### Game (C++)
-
-The C++ game template provides a native foundation for projects that need a CMake-based rendering or game pipeline.
-
-### React
-
-The React template creates a frontend scaffold powered by Vite and prepared for integration with an Android container.
-
-### Vue
-
-The Vue template creates a modern Vite-based Vue frontend scaffold for Android-integrated workflows.
-
-### Angular
-
-The Angular template creates a TypeScript-first frontend scaffold with Vite optimization for Android-centered delivery.
-
-### Preact
-
-The Preact template creates a lightweight Vite-based frontend scaffold for performance-sensitive apps.
-
-### PWA
-
-The PWA template is designed for progressive web app workflows that can be packaged or integrated into Android delivery flows.
+Not every template generates the same files. WebView, Compose, game, native, and frontend templates each produce a structure appropriate for the selected target.
 
 ## Configuration
 
@@ -328,76 +388,6 @@ It inspects:
 
 This makes troubleshooting faster and reduces setup friction.
 
-## Smart Dependencies
-
-JAPKGEN uses smart dependency handling to avoid unnecessary package noise and to choose only what a template actually needs.
-
-This helps with:
-
-* smaller generated projects
-* cleaner package graphs
-* fewer unused dependencies
-* faster installs
-* better maintenance clarity
-
-The generator prefers dependency sets that match the selected template and generation mode.
-
-## Fonts
-
-Frontend-based templates can use Google Fonts through CDN links.
-
-This is useful when you want:
-
-* consistent typography
-* zero local font asset management
-* fast setup
-* simple template rendering
-
-Example usage in generated frontend templates:
-
-* Google Fonts CDN
-* optimized default font loading
-* easy customization in HTML or CSS
-
-## Signing
-
-JAPKGEN supports release signing scaffolding through `keystore.properties`.
-
-When signing is enabled, the generator creates the expected configuration files and integrates them into the Android build setup.
-
-A typical signing setup includes:
-
-* Keystore file path
-* Key alias
-* Store password
-* Key password
-
-Example:
-
-```bash
-japkgen new --signing
-```
-
-## Icons
-
-JAPKGEN can generate launcher icons in standard Android mipmap densities.
-
-Supported outputs include:
-
-* `mipmap-mdpi`
-* `mipmap-hdpi`
-* `mipmap-xhdpi`
-* `mipmap-xxhdpi`
-* `mipmap-xxxhdpi`
-
-If no icon path is supplied, JAPKGEN can generate or provide a fallback launcher icon automatically.
-
-Example:
-
-```bash
-japkgen new --icon ./assets/icon.png
-```
-
 ## Development Workflow
 
 A typical workflow looks like this:
@@ -409,6 +399,25 @@ A typical workflow looks like this:
 5. Build the project with `japkgen build`
 6. Add your application logic or frontend content
 7. Sign and release when ready
+
+## Testing
+
+Before submitting changes, run the project tests and ensure the generated templates still behave correctly.
+
+Example:
+
+```bash
+npm test
+```
+
+Useful things to verify:
+
+* template generation
+* config loading
+* environment detection
+* utility functions
+* build scaffolding
+* README output or generated documentation
 
 ## Contributing
 
@@ -425,29 +434,10 @@ Recommended contribution workflow:
 
 Please keep contributions:
 
-* Clear
-* Modular
-* Well documented
-* Consistent with the existing project structure
-
-## Testing
-
-Before submitting changes, run the project tests and ensure the generated templates still behave correctly.
-
-Example:
-
-```bash
-npm test
-```
-
-If the project includes a CLI test suite, verify:
-
-* template generation
-* config loading
-* environment detection
-* utility functions
-* build scaffolding
-* README output or generated documentation
+* clear
+* modular
+* well documented
+* consistent with the existing project structure
 
 ## License
 

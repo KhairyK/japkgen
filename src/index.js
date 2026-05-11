@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import process from "node:process";
 import path from "node:path";
-import readline from "node:readline/promises";
-import { stdin as input, stdout as output } from "node:process";
+import prompts from "prompts";
 import pc from "picocolors";
 
 import { DEFAULTS, SUPPORTED_TEMPLATES } from "./constants.js";
@@ -19,14 +18,12 @@ import { normalizeBoolean } from "./utils.js";
 
 const VERSION = "2.0.0";
 const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY);
-const rl = interactive ? readline.createInterface({ input, output }) : null;
 const YEAR = new Date().getFullYear();
 
 const TEMPLATES = [...SUPPORTED_TEMPLATES];
 
-
 function usage() {
-console.log(`
+  console.log(`
 ${pc.bold(pc.cyan("JAPK Generator"))} ${pc.green(VERSION)}
 
 ${pc.bold(pc.yellow("Usage:"))}
@@ -56,9 +53,7 @@ ${pc.bold(pc.yellow("Config file:"))}
   )}
 
 ${pc.bold(pc.yellow("Notes:"))}
-  ${pc.dim(
-    "If required values are omitted, the CLI will ask you interactively."
-  )}
+  ${pc.dim("If required values are omitted, the CLI will ask you interactively.")}
 
 ${pc.bold(pc.yellow("Options:"))}
   ${pc.cyan("--name")} <name>
@@ -76,8 +71,11 @@ ${pc.bold(pc.yellow("Options:"))}
   ${pc.cyan("--store-password")} <password>
   ${pc.cyan("--key-password")} <password>
 `);
-console.warn(pc.yellow(`Warning: JAPK Generator ${VERSION} is in early beta. Please review the generated code and provide feedback.
-${YEAR} (C) OpenDN Foundation.`));
+  console.warn(
+    pc.yellow(
+      `Warning: JAPK Generator ${VERSION} is in early beta. Please review the generated code and provide feedback.\n${YEAR} (C) OpenDN Foundation.`
+    )
+  );
   process.exit(0);
 }
 
@@ -107,80 +105,127 @@ function parseFlags(argv) {
   return { options, rest };
 }
 
+function toStringValue(value, fallback = "") {
+  if (value === undefined || value === null) return String(fallback ?? "");
+  return String(value);
+}
+
 async function ask(question, defaultValue = "") {
-  if (!interactive || !rl) {
-    return defaultValue;
+  if (!interactive) {
+    return toStringValue(defaultValue);
   }
 
-  const suffix =
-    defaultValue !== undefined && defaultValue !== null && String(defaultValue).length > 0
-      ? ` [${defaultValue}]`
-      : "";
+  const hasDefault = defaultValue !== undefined && defaultValue !== null && String(defaultValue).length > 0;
 
-  const answer = await rl.question(`${question}${suffix}: `);
-  const trimmed = answer.trim();
+  const response = await prompts(
+    {
+      type: "text",
+      name: "value",
+      message: question,
+      initial: hasDefault ? String(defaultValue) : undefined
+    },
+    {
+      onCancel: () => {
+        throw new Error("Prompt cancelled by user.");
+      }
+    }
+  );
 
-  return trimmed.length > 0 ? trimmed : String(defaultValue ?? "");
+  const value = toStringValue(response.value, defaultValue).trim();
+  return value.length > 0 ? value : toStringValue(defaultValue);
 }
 
 async function askRequired(question, defaultValue = "") {
+  if (!interactive) {
+    const fallback = toStringValue(defaultValue).trim();
+    if (fallback.length > 0) return fallback;
+    throw new Error(`${question} This value is required.`);
+  }
+
   while (true) {
-    const answer = await ask(question, defaultValue);
-    if (String(answer).trim().length > 0) return String(answer).trim();
+    const response = await prompts(
+      {
+        type: "text",
+        name: "value",
+        message: question,
+        initial: defaultValue !== undefined && defaultValue !== null && String(defaultValue).length > 0
+          ? String(defaultValue)
+          : undefined,
+        validate: (value) => {
+          const text = String(value ?? "").trim();
+          return text.length > 0 ? true : "A value is required.";
+        }
+      },
+      {
+        onCancel: () => {
+          throw new Error("Prompt cancelled by user.");
+        }
+      }
+    );
 
-    if (!interactive) {
-      throw new Error(`${question} This value is required.`);
-    }
-
-    console.log("A value is required. Please try again.");
+    const value = String(response.value ?? "").trim();
+    if (value.length > 0) return value;
   }
 }
 
 async function askYesNo(question, defaultValue = false) {
-  if (!interactive || !rl) {
-    return defaultValue;
+  if (!interactive) {
+    return Boolean(defaultValue);
   }
 
-  const suffix = defaultValue ? " [Y/n]" : " [y/N]";
+  const response = await prompts(
+    {
+      type: "confirm",
+      name: "value",
+      message: question,
+      initial: Boolean(defaultValue)
+    },
+    {
+      onCancel: () => {
+        throw new Error("Prompt cancelled by user.");
+      }
+    }
+  );
 
-  while (true) {
-    const answer = await rl.question(`${question}${suffix}: `);
-    const normalized = answer.trim().toLowerCase();
-
-    if (!normalized) return defaultValue;
-    if (["y", "yes", "true", "1"].includes(normalized)) return true;
-    if (["n", "no", "false", "0"].includes(normalized)) return false;
-
-    console.log("Please answer with yes or no.");
-  }
+  return Boolean(response.value);
 }
 
 async function askChoice(question, choices, defaultValue) {
-  if (!interactive || !rl) {
+  if (!interactive) {
+    if (defaultValue === undefined || defaultValue === null || String(defaultValue).length === 0) {
+      throw new Error(`${question} This value is required.`);
+    }
     return defaultValue;
   }
 
-  console.log(question);
-  choices.forEach((choice, index) => {
-    console.log(`  ${index + 1}) ${choice}`);
-  });
+  const normalizedChoices = choices.map((choice) => ({
+    title: choice,
+    value: choice
+  }));
 
-  while (true) {
-    const answer = await rl.question(`Please select an option [${defaultValue}]: `);
-    const trimmed = answer.trim();
+  const defaultIndex = Math.max(
+    0,
+    normalizedChoices.findIndex(
+      (choice) => choice.value.toLowerCase() === String(defaultValue ?? "").toLowerCase()
+    )
+  );
 
-    if (!trimmed) return defaultValue;
-
-    const asNumber = Number(trimmed);
-    if (Number.isInteger(asNumber) && asNumber >= 1 && asNumber <= choices.length) {
-      return choices[asNumber - 1];
+  const response = await prompts(
+    {
+      type: "select",
+      name: "value",
+      message: question,
+      choices: normalizedChoices,
+      initial: defaultIndex >= 0 ? defaultIndex : 0
+    },
+    {
+      onCancel: () => {
+        throw new Error("Prompt cancelled by user.");
+      }
     }
+  );
 
-    const matched = choices.find((choice) => choice.toLowerCase() === trimmed.toLowerCase());
-    if (matched) return matched;
-
-    console.log("Please enter a valid selection.");
-  }
+  return response.value ?? defaultValue;
 }
 
 async function promptNewOptions(options, configDefaults = {}) {
@@ -195,9 +240,13 @@ async function promptNewOptions(options, configDefaults = {}) {
     ? configDefaults.permissions.join(",")
     : String(configDefaults.permissions || "");
   const defaultIcon = configDefaults.icon || "";
-  const signingDefaults = configDefaults.signing && typeof configDefaults.signing === "object" ? configDefaults.signing : {};
+  const signingDefaults =
+    configDefaults.signing && typeof configDefaults.signing === "object" ? configDefaults.signing : {};
 
-  const name = String(options.name ?? (await askRequired("Please enter the project name.", defaultName))).trim();
+  const name = String(
+    options.name ?? (await askRequired("Please enter the project name.", defaultName))
+  ).trim();
+
   const packageName = String(
     options.package ?? (await askRequired("Please enter the Android package name.", defaultPackage))
   ).trim();
@@ -206,7 +255,9 @@ async function promptNewOptions(options, configDefaults = {}) {
   if (!template) {
     template = String(
       await askChoice("Please select a project template.", TEMPLATES, defaultTemplate)
-    ).trim().toLowerCase();
+    )
+      .trim()
+      .toLowerCase();
   }
 
   const minSdk = Number(
@@ -220,9 +271,11 @@ async function promptNewOptions(options, configDefaults = {}) {
   );
 
   const url = String(options.url ?? "").trim();
-  const finalUrl = url || (template === "webview" || template === "pwa"
-    ? String(await askRequired("Please enter the application URL.", defaultUrl)).trim()
-    : "");
+  const finalUrl =
+    url ||
+    (template === "webview" || template === "pwa"
+      ? String(await askRequired("Please enter the application URL.", defaultUrl)).trim()
+      : "");
 
   const permissionsInput = String(options.permissions ?? defaultPermissions).trim();
   const icon = String(options.icon ?? (await ask("Please enter the icon path.", defaultIcon))).trim();
@@ -253,7 +306,10 @@ async function promptNewOptions(options, configDefaults = {}) {
 
 async function promptBuildOptions(projectDirArg, options, configDefaults = {}) {
   const projectDir = path.resolve(
-    projectDirArg ?? options.projectDir ?? configDefaults.projectDir ?? (await ask("Please enter the project directory.", process.cwd()))
+    projectDirArg ??
+      options.projectDir ??
+      configDefaults.projectDir ??
+      (await ask("Please enter the project directory.", process.cwd()))
   );
 
   const variant =
@@ -272,11 +328,16 @@ async function promptBuildOptions(projectDirArg, options, configDefaults = {}) {
 
 async function promptServeOptions(projectDirArg, options, configDefaults = {}) {
   const projectDir = path.resolve(
-    projectDirArg ?? options.projectDir ?? configDefaults.projectDir ?? (await ask("Please enter the project directory.", process.cwd()))
+    projectDirArg ??
+      options.projectDir ??
+      configDefaults.projectDir ??
+      (await ask("Please enter the project directory.", process.cwd()))
   );
 
   const port = Number(
-    options.port ?? configDefaults.port ?? (await ask("Please enter the server port.", String(DEFAULTS.servePort)))
+    options.port ??
+      configDefaults.port ??
+      (await ask("Please enter the server port.", String(DEFAULTS.servePort)))
   );
   const watch =
     options.watch !== undefined
@@ -288,19 +349,30 @@ async function promptServeOptions(projectDirArg, options, configDefaults = {}) {
 
 async function promptKeystoreOptions(options, configDefaults = {}) {
   const keystorePath = path.resolve(
-    options.path ?? options.keystore ?? configDefaults.keystore ?? (await ask("Please enter the keystore file path.", DEFAULTS.keystoreFile))
+    options.path ??
+      options.keystore ??
+      configDefaults.keystore ??
+      (await ask("Please enter the keystore file path.", DEFAULTS.keystoreFile))
   );
 
   const alias = sanitizeAlias(
-    String(options.alias ?? configDefaults.keyAlias ?? (await ask("Please enter the key alias.", DEFAULTS.keystoreAlias))).trim()
+    String(
+      options.alias ??
+        configDefaults.keyAlias ??
+        (await ask("Please enter the key alias.", DEFAULTS.keystoreAlias))
+    ).trim()
   );
 
   const storePassword = String(
-    options.storePassword ?? configDefaults.storePassword ?? (await ask("Please enter the keystore password.", DEFAULTS.keystoreStorePassword))
+    options.storePassword ??
+      configDefaults.storePassword ??
+      (await ask("Please enter the keystore password.", DEFAULTS.keystoreStorePassword))
   ).trim();
 
   const keyPassword = String(
-    options.keyPassword ?? configDefaults.keyPassword ?? (await ask("Please enter the key password.", DEFAULTS.keystoreKeyPassword))
+    options.keyPassword ??
+      configDefaults.keyPassword ??
+      (await ask("Please enter the key password.", DEFAULTS.keystoreKeyPassword))
   ).trim();
 
   const dname = String(
@@ -311,7 +383,13 @@ async function promptKeystoreOptions(options, configDefaults = {}) {
       ))
   ).trim();
 
-  const validityDays = Number(options.validity ?? (await ask("Please enter the certificate validity period in days.", "10000")));
+  const validityDays = Number(
+    options.validity ??
+      (await ask(
+        "Please enter the certificate validity period in days.",
+        "10000"
+      ))
+  );
 
   return {
     keystorePath,
@@ -326,7 +404,9 @@ async function promptKeystoreOptions(options, configDefaults = {}) {
 async function promptTestOptions(projectDirArg, configDefaults = {}) {
   return {
     projectDir: path.resolve(
-      projectDirArg ?? configDefaults.projectDir ?? (await ask("Please enter the project directory.", process.cwd()))
+      projectDirArg ??
+        configDefaults.projectDir ??
+        (await ask("Please enter the project directory.", process.cwd()))
     )
   };
 }
@@ -344,7 +424,6 @@ async function main() {
 
   if (!cmd || cmd === "--help" || cmd === "-h" || cmd === "help") {
     usage();
-    process.exit(0);
   }
 
   if (cmd === "--version" || cmd === "-v" || cmd === "version") {
@@ -366,7 +445,11 @@ async function main() {
   if (cmd === "build") {
     const maybeDir = argv[1] && !argv[1].startsWith("-") ? argv[1] : undefined;
     const { options } = parseFlags(argv.slice(maybeDir ? 2 : 1));
-    const { projectDir, variant, gradleVersion } = await promptBuildOptions(maybeDir, options, configDefaults);
+    const { projectDir, variant, gradleVersion } = await promptBuildOptions(
+      maybeDir,
+      options,
+      configDefaults
+    );
 
     await buildProject(projectDir, {
       variant,
@@ -430,13 +513,10 @@ async function main() {
   }
 
   throw new Error(`JAPK Generator ${VERSION} | Unknown command: ${cmd}.
-See 'japkgen --help' for usage information.
-    `);
-    process.exit(1);
+See 'japkgen --help' for usage information.`);
 }
 
-main()
-  .catch((error) => {
-    logger.error(error?.message || String(error));
-    process.exit(1);
-  });
+main().catch((error) => {
+  logger.error(error?.message || String(error));
+  process.exit(1);
+});

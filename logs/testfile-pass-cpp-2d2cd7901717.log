@@ -1,0 +1,10 @@
+# TEST LOG
+TITLE: PASS-cpp
+TIME: 2026-05-11T09:40:06.577Z
+
+{
+  status: 'PASS',
+  template: 'cpp',
+  projectDir: '/tmp/japkgen-test-INa7zD/Cpp Sample',
+  durationMs: 22
+}

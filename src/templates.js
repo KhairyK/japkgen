@@ -271,6 +271,177 @@ function buildAssetShell({ title, appName, subtitle }) {
 `;
 }
 
+
+function buildTailwindConfig() {
+  return `module.exports = {
+  content: [
+    './index.html',
+    './src/**/*.{js,jsx,ts,tsx,vue}'
+  ],
+  theme: {
+    extend: {
+      colors: {
+        brand: '#2563eb',
+        surface: '#0f172a'
+      }
+    }
+  },
+  plugins: []
+};
+`;
+}
+
+function buildPostcssConfig() {
+  return `module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {}
+  }
+};
+`;
+}
+
+function buildXml2JsonHelper() {
+  return `function normalizeValue(value) {
+  const trimmed = String(value ?? '').trim();
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  if (trimmed !== '' && !Number.isNaN(Number(trimmed))) return Number(trimmed);
+  return trimmed;
+}
+
+function walkNode(node) {
+  const result = {};
+
+  if (node.nodeType === Node.TEXT_NODE) {
+    return normalizeValue(node.textContent);
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+
+  for (const attr of Array.from(node.attributes || [])) {
+    result[\`@\${attr.name}\`] = normalizeValue(attr.value);
+  }
+
+  const children = Array.from(node.children || []);
+  if (!children.length) {
+    const text = normalizeValue(node.textContent);
+    if (Object.keys(result).length === 0) {
+      return text;
+    }
+    if (text !== '') {
+      result['#text'] = text;
+    }
+    return result;
+  }
+
+  for (const child of children) {
+    const value = walkNode(child);
+    if (value === null || value === undefined) continue;
+    const key = child.tagName;
+    if (Object.prototype.hasOwnProperty.call(result, key)) {
+      const current = result[key];
+      result[key] = Array.isArray(current) ? [...current, value] : [current, value];
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
+
+export function xmlToJson(xmlString = '') {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(String(xmlString), 'application/xml');
+  const error = doc.querySelector('parsererror');
+  if (error) {
+    throw new Error('Invalid XML: ' + error.textContent.replace(/\s+/g, ' ').trim());
+  }
+
+  const root = doc.documentElement;
+  if (!root) {
+    return {};
+  }
+
+  return { [root.tagName]: walkNode(root) };
+}
+
+export function prettyXmlJson(xmlString = '') {
+  return JSON.stringify(xmlToJson(xmlString), null, 2);
+}
+`;
+}
+
+function buildWebStyles() {
+  return `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #020617;
+}
+
+* { box-sizing: border-box; }
+html, body, #app { margin: 0; min-height: 100%; }
+body {
+  background:
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.45) 0%, rgba(2, 6, 23, 0) 40%),
+    linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  color: #e2e8f0;
+}
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.card {
+  width: min(840px, 100%);
+  border-radius: 28px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 24px 72px rgba(2, 6, 23, 0.45);
+  backdrop-filter: blur(14px);
+}
+.eyebrow {
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #93c5fd;
+  font-size: 0.78rem;
+}
+.hero-title {
+  margin: 0 0 12px;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  line-height: 1.02;
+}
+.lead {
+  margin: 0;
+  line-height: 1.8;
+  color: #cbd5e1;
+}
+.panel {
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.65);
+}
+.code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+}
+`;
+}
+
+function buildMaterialIconLink() {
+  return `  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />\n`;
+}
+
 function buildVitePackageJson({ name, framework, dependencies, devDependencies }) {
   return JSON.stringify(
     {
@@ -502,6 +673,7 @@ function baseCommonFiles({
   };
 }
 
+
 function webTemplate({
   title,
   framework,
@@ -565,6 +737,10 @@ function webTemplate({
         }),
         "frontend/package.json": packageJson,
         "frontend/vite.config.js": buildViteConfig({ framework }),
+        "frontend/tailwind.config.cjs": buildTailwindConfig(),
+        "frontend/postcss.config.cjs": buildPostcssConfig(),
+        "frontend/src/xml2json.js": buildXml2JsonHelper(),
+        "frontend/src/styles.css": buildWebStyles(),
         "frontend/index.html": `<!doctype html>
 <html lang="en">
 <head>
@@ -574,7 +750,7 @@ function webTemplate({
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <title>${appName}</title>
+${buildMaterialIconLink()}  <title>${appName}</title>
 </head>
 <body>
   <div id="app"></div>
@@ -599,21 +775,29 @@ function reactTemplate() {
     framework: "react",
     dependencies: {
       react: "^19.0.0",
-      "react-dom": "^19.0.0"
+      "react-dom": "^19.0.0",
+      "@mui/material": "^6.1.9",
+      "@mui/icons-material": "^6.1.9",
+      "@emotion/react": "^11.14.0",
+      "@emotion/styled": "^11.14.0"
     },
     devDependencies: {
       vite: "^6.0.0",
-      "@vitejs/plugin-react": "^4.3.0"
+      "@vitejs/plugin-react": "^4.3.0",
+      tailwindcss: "^3.4.14",
+      postcss: "^8.4.49",
+      autoprefixer: "^10.4.20"
     }
   });
 
   return webTemplate({
     title: "React",
     framework: "react",
-    summary: "A React starter packaged with a Vite frontend and an Android WebView shell.",
-    notes: `- Vite build output is redirected to the Android asset directory
-- Google Fonts CDN is wired in the starter HTML
-- External links are opened outside the WebView`,
+    summary: "A React starter packaged with Tailwind CSS, Material UI, XML-to-JSON previewing, and an Android WebView shell.",
+    notes: `- Tailwind CSS ships with PostCSS and a ready-to-use config
+- Google Fonts and Material Symbols are wired into the starter HTML
+- Material UI is included for the React starter
+- XML2JSON helper is included for quick data inspection in the web APK`,
     packageJson,
     extraSourceFiles: {
       "frontend/src/main.jsx": `import React from 'react';
@@ -627,60 +811,76 @@ ReactDOM.createRoot(document.getElementById('app')).render(
   </React.StrictMode>
 );
 `,
-      "frontend/src/App.jsx": `export default function App() {
+      "frontend/src/App.jsx": `import { useMemo } from 'react';
+import { Alert, Box, Button, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import { prettyXmlJson } from './xml2json';
+
+const sampleXml = ` + "`" + `<profile id="7" enabled="true">
+  <name>__APP_NAME__</name>
+  <role>Web APK</role>
+  <tags>
+    <tag>Tailwind</tag>
+    <tag>Material UI</tag>
+  </tags>
+</profile>` + "`" + `;
+
+export default function App() {
+  const jsonPreview = useMemo(() => prettyXmlJson(sampleXml), []);
+
   return (
     <main className="shell">
-      <section className="card">
-        <p className="eyebrow">React + Vite</p>
-        <h1>__APP_NAME__</h1>
-        <p>
-          This starter is optimized for hybrid Android delivery. Build the frontend, then run the
-          Android shell.
-        </p>
-      </section>
+      <Card className="card">
+        <CardContent>
+          <Stack spacing={3}>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+              <Chip label="React + Vite" color="primary" />
+              <Chip label="Tailwind CSS" variant="outlined" />
+              <Chip label="XML2JSON" variant="outlined" />
+            </Stack>
+
+            <Box>
+              <Typography variant="overline" className="eyebrow">
+                Web APK starter
+              </Typography>
+              <Typography variant="h2" component="h1" className="hero-title">
+                __APP_NAME__
+              </Typography>
+              <Typography variant="body1" className="lead">
+                A polished hybrid starter with Material UI components, Material Symbols, and a
+                built-in XML-to-JSON preview.
+              </Typography>
+            </Box>
+
+            <Alert icon={<AutoAwesomeIcon fontSize="inherit" />} severity="info">
+              Build the frontend, then ship it through the Android WebView shell.
+            </Alert>
+
+            <Stack direction="row" spacing={1} alignItems="center">
+              <span className="material-symbols-outlined" style={{ fontSize: 28 }}>
+                stars
+              </span>
+              <Typography variant="body2">
+                Material Symbols are loaded from Google Fonts.
+              </Typography>
+            </Stack>
+
+            <Button variant="contained">Open app preview</Button>
+
+            <section className="panel p-4">
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                XML → JSON preview
+              </Typography>
+              <pre className="code">{jsonPreview}</pre>
+            </section>
+          </Stack>
+        </CardContent>
+      </Card>
     </main>
   );
 }
 `,
-      "frontend/src/styles.css": `:root {
-  color-scheme: dark;
-  font-family: 'Inter', system-ui, sans-serif;
-  background: #020617;
-}
-
-* { box-sizing: border-box; }
-html, body, #app { margin: 0; min-height: 100%; }
-body {
-  background: radial-gradient(circle at top, #1d4ed8 0%, #020617 58%);
-  color: #e2e8f0;
-}
-.shell {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-}
-.card {
-  width: min(640px, 100%);
-  padding: 32px;
-  border-radius: 28px;
-  background: rgba(15, 23, 42, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 24px 72px rgba(2, 6, 23, 0.45);
-}
-.eyebrow {
-  margin: 0 0 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: #93c5fd;
-  font-size: 0.78rem;
-}
-h1 {
-  margin: 0 0 12px;
-  font-size: clamp(2.4rem, 6vw, 4rem);
-}
-p { margin: 0; line-height: 1.7; color: #cbd5e1; }
-`
+      "frontend/src/styles.css": buildWebStyles()
     }
   });
 }
@@ -1441,11 +1641,8 @@ function gameCppTemplate() {
       extraAndroidBlock: `    externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
-            version "__CMAKE_VERSION__"
         }
-    }
-
-    ndkVersion "__NDK_VERSION__"`,
+    }`,
       layoutXml: `<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -2031,6 +2228,306 @@ Java___PACKAGE_JNI___MainActivity_nativeGetScore(JNIEnv*, jobject) {
   };
 }
 
+
+function nativeCCommonReadme(title, summary, notes) {
+  return makeReadme({
+    appName: "__APP_NAME__",
+    templateTitle: title,
+    templateSummary: summary,
+    templateNotes: notes,
+    setupNotes: [
+      "The Android shell loads a small native library through JNI.",
+      "CMake and Make scaffolding are included for local experimentation.",
+      "The starter is intentionally small so you can swap in your own native code fast."
+    ]
+  });
+}
+
+function nativeCActivity(bodyLabel = "Hello from native C!") {
+  return `package __PACKAGE__;
+
+import android.os.Bundle;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity {
+
+    static {
+        System.loadLibrary("native-lib");
+    }
+
+    private native String nativeBanner();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        TextView textView = new TextView(this);
+        textView.setPadding(48, 48, 48, 48);
+        textView.setTextSize(18f);
+        textView.setText(nativeBanner());
+        setContentView(textView);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+}
+`;
+}
+
+function cTemplate() {
+  const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
+  const readme = nativeCCommonReadme(
+    "C",
+    "A compact Android starter that demonstrates a C JNI bridge with both CMake and Make scaffolding.",
+    `- Native code lives in app/src/main/cpp
+- Includes a CMakeLists.txt file for Android Studio
+- Includes a Makefile for local experiments and quick references`
+  );
+
+  return {
+    dependencies,
+    files: baseCommonFiles({
+      dependencies,
+      layoutXml: `<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/message"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="Loading native C..."
+        android:textSize="20sp" />
+</FrameLayout>
+`,
+      activitySource: `package __PACKAGE__;
+
+import android.os.Bundle;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity {
+
+    static {
+        System.loadLibrary("native-lib");
+    }
+
+    private native String nativeBanner();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        TextView view = new TextView(this);
+        view.setPadding(48, 48, 48, 48);
+        view.setTextSize(18f);
+        view.setText(nativeBanner());
+        setContentView(view);
+    }
+}
+`,
+      extraAndroidBlock: `    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+        }
+    }`,
+      extraFiles: {
+        "app/src/main/cpp/CMakeLists.txt": `cmake_minimum_required(VERSION 3.22)
+
+project(japkgen_native_c LANGUAGES C)
+
+add_library(native-lib SHARED native-lib.c)
+
+find_library(log-lib log)
+
+target_link_libraries(native-lib \${log-lib})
+`,
+        "app/src/main/cpp/native-lib.c": `#include <jni.h>
+
+#ifdef __ANDROID__
+#include <android/log.h>
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "JAPKGEN_C", __VA_ARGS__)
+#else
+#define LOGE(...)
+#endif
+
+JNIEXPORT jstring JNICALL
+Java___PACKAGE_JNI___MainActivity_nativeBanner(JNIEnv *env, jobject thiz) {
+    (void)thiz;
+    const char *message = "Hello from native C!\n\nCMake and Make files are ready.\n";
+    return (*env)->NewStringUTF(env, message);
+}
+`,
+        "Makefile": `APP_NAME ?= japkgen-native-c
+BUILD_DIR ?= build
+CC ?= cc
+CFLAGS ?= -O2 -Wall -Wextra -pedantic
+
+all: help
+
+help:
+	@echo "Targets:"
+	@echo "  make demo   - build a tiny host-side demo"
+	@echo "  make clean  - remove build outputs"
+
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+demo: $(BUILD_DIR)
+	$(CC) $(CFLAGS) -x c -o $(BUILD_DIR)/$(APP_NAME) - <<'EOF'
+#include <stdio.h>
+int main(void) {
+    puts("Hello from the JAPKGEN C template.");
+    return 0;
+}
+EOF
+	@echo "Built $(BUILD_DIR)/$(APP_NAME)"
+
+clean:
+	rm -rf $(BUILD_DIR)
+
+.PHONY: all help demo clean
+`
+      },
+      readme,
+      allowCleartextTraffic: false
+    })
+  };
+}
+
+function cppTemplate() {
+  const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
+  const readme = nativeCCommonReadme(
+    "C++",
+    "A compact Android starter that demonstrates a C++ JNI bridge with both CMake and Make scaffolding.",
+    `- Native code lives in app/src/main/cpp
+- Includes a CMakeLists.txt file for Android Studio
+- Includes a Makefile for local experiments and quick references`
+  );
+
+  return {
+    dependencies,
+    files: baseCommonFiles({
+      dependencies,
+      layoutXml: `<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/message"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="Loading native C++..."
+        android:textSize="20sp" />
+</FrameLayout>
+`,
+      activitySource: `package __PACKAGE__;
+
+import android.os.Bundle;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity {
+
+    static {
+        System.loadLibrary("native-lib");
+    }
+
+    private native String nativeBanner();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        TextView view = new TextView(this);
+        view.setPadding(48, 48, 48, 48);
+        view.setTextSize(18f);
+        view.setText(nativeBanner());
+        setContentView(view);
+    }
+}
+`,
+      extraAndroidBlock: `    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+        }
+    }`,
+      extraFiles: {
+        "app/src/main/cpp/CMakeLists.txt": `cmake_minimum_required(VERSION 3.22)
+
+project(japkgen_native_cpp LANGUAGES CXX)
+
+add_library(native-lib SHARED native-lib.cpp)
+
+target_compile_features(native-lib PRIVATE cxx_std_17)
+
+find_library(log-lib log)
+
+target_link_libraries(native-lib \${log-lib})
+`,
+        "app/src/main/cpp/native-lib.cpp": `#include <jni.h>
+
+#include <string>
+
+#ifdef __ANDROID__
+#include <android/log.h>
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "JAPKGEN_CPP", __VA_ARGS__)
+#else
+#define LOGE(...)
+#endif
+
+extern "C" JNIEXPORT jstring JNICALL
+Java___PACKAGE_JNI___MainActivity_nativeBanner(JNIEnv *env, jobject thiz) {
+    (void)thiz;
+    const std::string message = "Hello from native C++!\n\nCMake and Make files are ready.\n";
+    return env->NewStringUTF(message.c_str());
+}
+`,
+        "Makefile": `APP_NAME ?= japkgen-native-cpp
+BUILD_DIR ?= build
+CXX ?= c++
+CXXFLAGS ?= -O2 -Wall -Wextra -pedantic -std=c++17
+
+all: help
+
+help:
+	@echo "Targets:"
+	@echo "  make demo   - build a tiny host-side demo"
+	@echo "  make clean  - remove build outputs"
+
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+demo: $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -x c++ -o $(BUILD_DIR)/$(APP_NAME) - <<'EOF'
+#include <iostream>
+int main() {
+    std::cout << "Hello from the JAPKGEN C++ template.\n";
+    return 0;
+}
+EOF
+	@echo "Built $(BUILD_DIR)/$(APP_NAME)"
+
+clean:
+	rm -rf $(BUILD_DIR)
+
+.PHONY: all help demo clean
+`
+      },
+      readme,
+      allowCleartextTraffic: false
+    })
+  };
+}
+
 const BUILTIN_TEMPLATES = {
   webview: () => {
     const dependencies = [ANDROIDX.appcompat, ANDROIDX.core, ANDROIDX.swipeRefresh, ANDROIDX.webkit];
@@ -2244,6 +2741,10 @@ public class MainActivity extends AppCompatActivity {
   native: nativeTemplate,
   compose: composeTemplate,
   kotlin: kotlinTemplate,
+  c: cTemplate,
+  cpp: cppTemplate,
+  cmake: cppTemplate,
+  make: cTemplate,
   "game-java": gameJavaTemplate,
   "game-cpp": gameCppTemplate
 };

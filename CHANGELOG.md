@@ -15,8 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Vue
   - Angular
   - Preact
+- Added C/C++ templates with:
+  - CMake
+  - Makefile support
 - Added **Vite-based bundling** for frontend templates to improve development speed and build performance.
 - Added **Google Fonts CDN support** for web templates.
+- Added **Tailwind CSS support** for Web APK templates.
+- Added **Material UI** and **Material Symbols / Material Icons** support.
+- Added **XML to JSON** helper support for Web APK templates.
 - Added **Jetpack Compose** template support.
 - Added **config file support** for project defaults and template customization.
 - Added improved **environment auto-detection** for better host system discovery.
@@ -25,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added optimized **game templates** for both Java and native C++ workflows.
 - Added stronger project scaffolding for Android, hybrid, and frontend-integrated use cases.
 - Added improved generated documentation output.
+- Added interactive CLI prompts using `prompts`.
 
 ### Changed
 - Refactored template generation to support a more modular and maintainable architecture.
@@ -32,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved README generation to create more professional and developer-friendly documentation.
 - Improved default project structure for better template separation.
 - Improved CLI behavior to better support modern JavaScript and Android workflows.
+- Improved logging output for clearer debug information.
+- Improved template resolution and dependency handling across all templates.
 
 ### Fixed
 - Fixed several template-generation edge cases.
@@ -39,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed dependency handling so generated projects avoid unnecessary installs where possible.
 - Fixed documentation inconsistencies in generated project output.
 - Fixed template path and configuration resolution issues.
+- Fixed minor syntax and escaping issues in generated files.
+- Fixed CMake and Makefile generation edge cases.
+- Fixed Web APK asset integration issues.
+- Fixed CLI prompt handling for interactive and non-interactive environments.
 
 ### Security
 - Improved generation safety by reducing unnecessary dependency exposure.
@@ -58,30 +71,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - This release represents a major expansion of JAPKGEN’s template system and project generation capabilities.
 - Existing workflows remain supported, but projects created with 2.0.0 now include significantly more template options and improved defaults.
 
+---
 
-## [1.2.0] - 2026-05-6
+## [1.2.0] - 2026-05-06
 
 ### Added
 - New **Create keystore**
-- New **Serve Mode**
-- New **Analyzer APK**
+- New **Serve mode**
+- New **APK analyzer**
 - New **Kotlin template**
-- New **Plugins system for custom template and logic**
+- New **plugins system** for custom templates and logic
 
-## [1.1.0] - 2026-05-1
+### Changed
+- Improved CLI flow and project generation behavior.
+- Improved output structure for generated projects.
+
+### Fixed
+- Fixed several scaffolding edge cases.
+- Fixed template resolution bugs in custom setups.
+
+---
+
+## [1.1.0] - 2026-05-01
 
 ### Added
 - New **PWA template**
   - Local asset-based WebView using AndroidX WebKit
   - Offline-ready structure (`index.html`, `offline.html`, manifest)
-- New **Game templates**
+- New **game templates**
   - `game-java` (SurfaceView game loop scaffold)
   - `game-cpp` (NDK + CMake native starter)
 - **Automatic AndroidX dependency injection**
   - Templates now declare required dependencies internally
 - **Pull-to-refresh support** for WebView template
 - **Progress indicator** for page loading in WebView/PWA templates
-- **External URL handling** (open non-http schemes via Intent)
+- **External URL handling** (open non-HTTP schemes via Intent)
 - **CMake integration** for native (C/C++) builds
 - **Modular template system**
   - Shared `commonFiles()` generator
@@ -108,6 +132,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Gradle configuration inconsistencies
 - Build failures caused by missing dependencies
 - JNI naming issues in C++ template
+
 ---
 
 ## [1.0.0] - 2026-04-27

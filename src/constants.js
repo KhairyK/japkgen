@@ -45,6 +45,10 @@ export const SUPPORTED_TEMPLATES = [
   "native",
   "compose",
   "kotlin",
+  "c",
+  "cpp",
+  "cmake",
+  "make",
   "game-java",
   "game-cpp"
 ];

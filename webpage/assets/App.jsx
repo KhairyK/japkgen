@@ -23,56 +23,163 @@ import {
   Sparkles,
   RefreshCw,
   Newspaper,
+  Palette,
+  Package,
+  Wrench,
+  Code2,
 } from 'lucide-react';
 
 const features = [
   {
     icon: <Zap />,
     title: 'Instant Scaffolding',
-    desc: 'Generate manifests, Gradle files, and source directories within seconds.',
+    desc: 'Generate Android, hybrid, native, and frontend project structures in seconds.',
   },
   {
     icon: <Globe />,
-    title: 'WebView Focus',
-    desc: 'Effortlessly convert a PWA or website into a polished Android application.',
+    title: 'WebView and Web APK',
+    desc: 'Turn a website or frontend stack into an Android package with a clean workflow.',
   },
   {
     icon: <Smartphone />,
     title: 'Native Starter',
-    desc: 'Use a clean native boilerplate designed for performance and clarity.',
+    desc: 'Use a practical Android boilerplate designed for clarity and maintainability.',
+  },
+  {
+    icon: <Code2 />,
+    title: 'C and C++ Templates',
+    desc: 'Create native game and app scaffolds with CMake and Make support.',
   },
   {
     icon: <ShieldCheck />,
-    title: 'Permission Injection',
-    desc: 'Add permissions directly through CLI arguments without editing XML manually.',
-  },
-  {
-    icon: <Cpu />,
-    title: 'Build Automation',
-    desc: 'Compile debug or release APKs automatically using the Gradle Wrapper.',
+    title: 'Signing Scaffold',
+    desc: 'Prepare release signing files and keystore configuration with simple CLI input.',
   },
   {
     icon: <Settings />,
-    title: 'Customizable SDK',
-    desc: 'Configure compile, target, and minimum SDK levels with simple flags.',
+    title: 'Smart CLI Prompts',
+    desc: 'Use prompts-based interactive input with better debug-friendly output.',
+  },
+  {
+    icon: <Palette />,
+    title: 'Modern Frontend Stack',
+    desc: 'React, Vue, Angular, and Preact templates use Vite and modern frontend defaults.',
+  },
+  {
+    icon: <Package />,
+    title: 'Web APK UI Stack',
+    desc: 'Tailwind CSS, Material UI, and Material Icons support for web-focused APK projects.',
+  },
+  {
+    icon: <Wrench />,
+    title: 'XML to JSON Helper',
+    desc: 'Generate and use XML-to-JSON helpers for Web APK workflows when needed.',
+  },
+];
+
+const templates = [
+  {
+    icon: <Layers />,
+    name: 'WebView',
+    desc: 'Android container for websites with navigation, loading, and offline-friendly structure.',
+  },
+  {
+    icon: <Globe />,
+    name: 'Web APK',
+    desc: 'Frontend-driven APK template with Tailwind, Material UI, and XML2JSON support.',
+  },
+  {
+    icon: <Smartphone />,
+    name: 'Native',
+    desc: 'Minimal Android starter for straightforward app development.',
+  },
+  {
+    icon: <Code2 />,
+    name: 'Kotlin',
+    desc: 'Optimized Kotlin template for clean and practical Android workflows.',
+  },
+  {
+    icon: <Cpu />,
+    name: 'Compose',
+    desc: 'Jetpack Compose starter with modern Android UI defaults.',
+  },
+  {
+    icon: <Box />,
+    name: 'Game Java',
+    desc: 'Canvas-style game scaffold for Java-based Android projects.',
+  },
+  {
+    icon: <Code2 />,
+    name: 'Game C++',
+    desc: 'Native game scaffold with CMake integration and C/C++ support.',
+  },
+  {
+    icon: <Package />,
+    name: 'React',
+    desc: 'Vite-powered React template for web and Android-integrated workflows.',
+  },
+  {
+    icon: <Package />,
+    name: 'Vue',
+    desc: 'Vite-powered Vue template for modern frontend scaffolding.',
+  },
+  {
+    icon: <Package />,
+    name: 'Angular',
+    desc: 'TypeScript-first Angular template with Vite optimization.',
+  },
+  {
+    icon: <Package />,
+    name: 'Preact',
+    desc: 'Lightweight Vite-powered Preact template for compact frontend builds.',
+  },
+  {
+    icon: <FileCode />,
+    name: 'C',
+    desc: 'Native C template with CMake and Make scaffolding.',
+  },
+  {
+    icon: <FileCode />,
+    name: 'C++',
+    desc: 'Native C++ template with CMake and Make scaffolding.',
   },
 ];
 
 const commands = [
   {
     cmd: 'new',
-    args: '--name, --package, --template, --min-sdk',
-    desc: 'Creates a new project with a specific configuration.',
+    args: '--name, --package, --template, --min-sdk, --target-sdk, --compile-sdk',
+    desc: 'Creates a new project from a template with interactive or flag-based input.',
   },
   {
     cmd: 'build',
-    args: '--variant, --gradle-version',
-    desc: 'Compiles the project into an APK for debug or release builds.',
+    args: '[projectDir], --variant, --gradle-version',
+    desc: 'Builds an existing project into an APK using the available Gradle setup.',
   },
   {
-    cmd: 'clean',
+    cmd: 'doctor',
     args: 'None',
-    desc: 'Removes build artifacts and temporary files.',
+    desc: 'Checks whether the local Android environment is ready.',
+  },
+  {
+    cmd: 'serve',
+    args: '[projectDir], --port, --watch',
+    desc: 'Starts a local preview server for supported project types.',
+  },
+  {
+    cmd: 'keystore create',
+    args: '--path, --alias, --store-password, --key-password',
+    desc: 'Creates a release keystore and signing scaffold.',
+  },
+  {
+    cmd: 'test',
+    args: '[projectDir]',
+    desc: 'Validates generated project structure and template output.',
+  },
+  {
+    cmd: 'analyze',
+    args: '<file.apk>',
+    desc: 'Inspects an APK and reports useful package details.',
   },
 ];
 
@@ -200,7 +307,6 @@ const App = () => {
         />
       </div>
 
-      {/* NAVIGATION */}
       <nav className="fixed top-0 w-full z-[100] bg-[#070b14]/75 backdrop-blur-xl border-b border-slate-800/80">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <button
@@ -259,7 +365,6 @@ const App = () => {
         </div>
       </nav>
 
-      {/* HERO */}
       <section id="top" className="relative pt-36 pb-20 px-6 overflow-hidden">
         <motion.div
           className="max-w-6xl mx-auto text-center"
@@ -281,9 +386,10 @@ const App = () => {
             variants={itemVariants}
             className="text-5xl md:text-7xl font-extrabold mb-8 tracking-tight leading-[1.06] text-white"
           >
-            Build Android Applications <br />
+            Build Android Projects
+            <br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300">
-              Without Unnecessary Complexity.
+              Faster, Cleaner, and Smarter.
             </span>
           </motion.h1>
 
@@ -291,10 +397,9 @@ const App = () => {
             variants={itemVariants}
             className="text-base md:text-lg text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed"
           >
-            Eliminate repetitive setup work.{' '}
             <span className="text-slate-200 font-semibold italic">japkgen</span>{' '}
-            helps developers scaffold Android projects — both WebView and Native
-            — directly from the terminal with a clean and efficient workflow.
+            helps developers scaffold Android, WebView, Web APK, native, and frontend-integrated
+            projects directly from the terminal with a clean beta workflow.
           </motion.p>
 
           <motion.div
@@ -328,15 +433,13 @@ const App = () => {
                 <CheckCircle2 size={12} className="text-indigo-500" /> Reliable
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 size={12} className="text-indigo-500" /> Open
-                Source
+                <CheckCircle2 size={12} className="text-indigo-500" /> Open Source
               </span>
             </div>
           </motion.div>
         </motion.div>
       </section>
 
-      {/* BADGES */}
       <section className="py-10 border-y border-slate-800/80 bg-slate-950/40">
         <motion.div
           className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center gap-6 md:gap-8 opacity-70 grayscale hover:grayscale-0 transition-all"
@@ -364,14 +467,13 @@ const App = () => {
         </motion.div>
       </section>
 
-      {/* FEATURES */}
       <section id="features" className="py-24 px-6 max-w-7xl mx-auto">
         <div className="text-center mb-16" data-aos="fade-up">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Core Capabilities
           </h2>
           <p className="text-slate-400 max-w-2xl mx-auto">
-            Everything you need to begin Android development with clarity and
+            Everything you need to start Android and hybrid project scaffolding with clarity and
             without unnecessary overhead.
           </p>
         </div>
@@ -407,7 +509,6 @@ const App = () => {
         </motion.div>
       </section>
 
-      {/* NEWS */}
       <section id="news" className="py-24 px-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between gap-4 mb-10">
           <div className="text-center md:text-left">
@@ -422,7 +523,8 @@ const App = () => {
               Latest Updates
             </h2>
             <p className="text-slate-400 max-w-2xl">
-              Receive real-time news, release notes, and project updates directly as they happen, keeping you informed about every new feature, fix, and improvement without delay
+              Release notes, fixes, and project updates shown in one place so visitors can follow
+              what is changing without digging through the repository first.
             </p>
           </div>
 
@@ -504,129 +606,47 @@ const App = () => {
         )}
       </section>
 
-      {/* TEMPLATES */}
       <section
         id="templates"
         className="py-24 bg-slate-950/40 border-y border-slate-800/60"
       >
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <motion.div
-              data-aos="fade-right"
-              initial={{ opacity: 0, x: -24 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.25 }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-            >
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
-                Two Primary Templates,
-                <br /> One Powerful Tool.
-              </h2>
-              <p className="text-slate-400 mb-8 text-lg leading-relaxed max-w-xl">
-                japkgen provides a clean foundation for both web-based
-                applications and native application logic.
-              </p>
-
-              <div className="space-y-5">
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  transition={{ duration: 0.25 }}
-                  className="flex gap-4 p-5 rounded-2xl bg-white/0 hover:bg-slate-800/40 border border-transparent hover:border-slate-800 transition-all"
-                >
-                  <div className="mt-1 shrink-0">
-                    <Layers className="text-cyan-300" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white uppercase text-sm tracking-widest mb-1">
-                      WebView Template
-                    </h4>
-                    <p className="text-slate-400 text-sm leading-relaxed">
-                      Includes JavaScript support, back navigation handling, and
-                      optimized cache configuration.
-                    </p>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  transition={{ duration: 0.25 }}
-                  className="flex gap-4 p-5 rounded-2xl bg-white/0 hover:bg-slate-800/40 border border-transparent hover:border-slate-800 transition-all"
-                >
-                  <div className="mt-1 shrink-0">
-                    <Box className="text-indigo-300" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white uppercase text-sm tracking-widest mb-1">
-                      Native Template
-                    </h4>
-                    <p className="text-slate-400 text-sm leading-relaxed">
-                      A minimal MainActivity structure with Gradle settings
-                      optimized for compact APK output.
-                    </p>
-                  </div>
-                </motion.div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              className="relative"
-              data-aos="fade-left"
-              initial={{ opacity: 0, x: 24 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.25 }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-            >
-              <div className="absolute -inset-4 bg-indigo-500/15 blur-3xl rounded-full" />
-              <div className="relative bg-[#0c111b] border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
-                <div className="bg-slate-900 px-4 py-3 flex items-center justify-between border-b border-slate-800">
-                  <div className="flex space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                  </div>
-                  <span className="text-[10px] uppercase tracking-[0.25em] text-slate-500 font-bold">
-                    Project Generator
-                  </span>
-                </div>
-
-                <div className="p-6 md:p-8 font-mono text-xs md:text-sm leading-7">
-                  <p className="text-emerald-400 italic mb-2">
-                    // Generate a modern WebView project
-                  </p>
-                  <p>
-                    <span className="text-indigo-400">japkgen</span> new \
-                  </p>
-                  <p className="pl-6">
-                    --name=
-                    <span className="text-amber-300">"NitroDashboard"</span> \
-                  </p>
-                  <p className="pl-6">
-                    --package=
-                    <span className="text-amber-300">"com.nitro.app"</span> \
-                  </p>
-                  <p className="pl-6">
-                    --template=<span className="text-amber-300">"webview"</span>{' '}
-                    \
-                  </p>
-                  <p className="pl-6">
-                    --url=
-                    <span className="text-amber-300">"https://nitro.app"</span>
-                  </p>
-
-                  <div className="mt-6 h-px bg-slate-800" />
-
-                  <p className="mt-4 text-slate-500">Generating files...</p>
-                  <p className="text-indigo-400">
-                    ✓ Done. Project created at ./NitroDashboard
-                  </p>
-                </div>
-              </div>
-            </motion.div>
+          <div className="text-center mb-16" data-aos="fade-up">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Templates
+            </h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              JAPKGEN ships with Android, native, web, and frontend templates so you can start from
+              the right foundation instead of assembling everything by hand.
+            </p>
           </div>
+
+          <motion.div
+            className="grid md:grid-cols-2 xl:grid-cols-3 gap-6"
+            variants={sectionVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            {templates.map((item, index) => (
+              <motion.div
+                key={index}
+                variants={itemVariants}
+                whileHover={{ y: -5 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="p-6 rounded-3xl bg-[#0c111b]/90 border border-slate-800/80 hover:border-indigo-500/40 transition-all"
+              >
+                <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 text-indigo-300 flex items-center justify-center mb-5">
+                  {item.icon}
+                </div>
+                <h3 className="text-white font-bold text-lg mb-2">{item.name}</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      {/* COMMANDS */}
       <section id="commands" className="py-24 px-6 max-w-5xl mx-auto">
         <div className="text-center mb-16" data-aos="fade-up">
           <h2 className="text-3xl font-bold text-white mb-4 italic tracking-tighter">
@@ -664,7 +684,6 @@ const App = () => {
         </motion.div>
       </section>
 
-      {/* STRUCTURE */}
       <section id="structure" className="py-24 px-6 bg-[#060910]">
         <div className="max-w-5xl mx-auto">
           <motion.div
@@ -694,6 +713,12 @@ const App = () => {
                   ├── <span className="text-emerald-400">java/</span>
                 </p>
                 <p className="pl-8 border-l border-slate-700">
+                  ├── <span className="text-cyan-400">kotlin/</span>
+                </p>
+                <p className="pl-8 border-l border-slate-700">
+                  ├── <span className="text-amber-400">cpp/</span>
+                </p>
+                <p className="pl-8 border-l border-slate-700">
                   └── <span className="text-amber-400">res/</span>
                 </p>
                 <p className="pl-4 border-l border-slate-700">├── gradlew</p>
@@ -704,9 +729,8 @@ const App = () => {
 
               <div className="text-slate-400 text-sm flex flex-col justify-center">
                 <p className="mb-4 italic leading-relaxed">
-                  "japkgen ensures that each project follows official Android
-                  conventions, allowing it to be imported into Android Studio
-                  without errors."
+                  “japkgen keeps the generated structure predictable so projects can be opened,
+                  inspected, and extended without extra cleanup.”
                 </p>
                 <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 text-[12px] space-y-2">
                   <p className="flex justify-between gap-6">
@@ -724,7 +748,6 @@ const App = () => {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="py-32 px-6 text-center overflow-hidden relative">
         <div className="absolute inset-0 bg-indigo-600/5 -skew-y-6 scale-110" />
         <motion.div
@@ -739,8 +762,8 @@ const App = () => {
             Ready to Build Your First APK?
           </h2>
           <p className="text-slate-400 mb-10 max-w-xl mx-auto leading-relaxed">
-            Join developers who value speed, structure, and terminal-first
-            efficiency.
+            Install JAPKGEN, pick a template, and start generating project scaffolds without the
+            usual setup drag.
           </p>
 
           <div className="flex flex-wrap justify-center gap-4">
@@ -750,23 +773,22 @@ const App = () => {
               onClick={() => copyToClipboard(installCommand)}
               className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2"
             >
-              <Download size={18} />{' '}
+              <Download size={18} />
               {copied ? 'Copied to Clipboard' : 'Install japkgen'}
             </motion.button>
 
             <motion.button
               whileHover={{ y: -3, scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => window.location.assign('https://japkgen.opendnf.cloud/docs')}
+              onClick={() => scrollToSection('templates')}
               className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-4 rounded-2xl font-bold border border-slate-700 transition-all flex items-center gap-2"
             >
-              View Documentation <ArrowRight size={18} />
+              Explore Templates <ArrowRight size={18} />
             </motion.button>
           </div>
         </motion.div>
       </section>
 
-      {/* FOOTER */}
       <footer className="py-12 border-t border-slate-800 text-center px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center space-x-2">

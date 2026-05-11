@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { extname } from "node:path";
 import { logger } from "./logger.js";
+import { debugLog } from "./debug.js";
 import { fileExists } from "./utils.js";
 
 const MIME = {
@@ -104,6 +105,7 @@ export async function serveProject(projectDirArg = process.cwd(), { port = 4173,
   logger.title("JAPKGEN Serve");
   logger.success(`Server aktif di http://localhost:${port}`);
   logger.info(`Serving: ${rootDir}`);
+  debugLog("serve", "Serving root", rootDir);
 
   let watcher = null;
   if (watch) {

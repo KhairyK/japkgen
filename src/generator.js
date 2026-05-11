@@ -23,6 +23,7 @@ import {
 } from "./utils.js";
 import { writeSigningFiles } from "./signing.js";
 import { loadPlugins, runHooks } from "./plugins.js";
+import { debugLog } from "./debug.js";
 
 async function promptText(message, initial = "") {
   const { createInterface } = await import("node:readline/promises");
@@ -129,10 +130,12 @@ async function getResolvedTemplate(templateName, registry = {}) {
 
 export async function generateProject(cliOptions = {}) {
   const projectConfig = await loadProjectConfig(process.cwd());
+  debugLog("generator", "Loaded project config", projectConfig.path || "<none>");
   const pluginBundle = await loadPlugins(process.cwd());
   const configDefaults = projectConfig.defaults || {};
   const opts = mergeConfigDefaults(configDefaults, cliOptions);
   const registry = resolveTemplateRegistry(pluginBundle.templates, projectConfig.templates);
+  debugLog("generator", "Template registry size", Object.keys(registry).length);
 
   let projectName = String(opts.name).trim();
   let packageName = String(opts.package).trim();

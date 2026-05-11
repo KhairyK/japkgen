@@ -1,0 +1,10 @@
+# TEST LOG
+TITLE: PASS-c
+TIME: 2026-05-11T09:40:06.547Z
+
+{
+  status: 'PASS',
+  template: 'c',
+  projectDir: '/tmp/japkgen-test-jsU3Dz/C Sample',
+  durationMs: 74
+}
