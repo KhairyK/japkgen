@@ -30,9 +30,10 @@ function block(title, details = []) {
   const left = Math.max(0, Math.floor((width - titleLine.length) / 2));
   const right = Math.max(0, width - titleLine.length - left);
   const out = [
-    color(CYAN, "┌" + "─".repeat(left) + titleLine + "─".repeat(right) + "┐")
+    color(CYAN, "┌" + "─".repeat(left) + titleLine + "─".repeat(right) + "┐"),
   ];
-  for (const item of details) out.push(color(CYAN, `│ ${item.padEnd(width - 2)}│`));
+  for (const item of details)
+    out.push(color(CYAN, `│ ${item.padEnd(width - 2)}│`));
   out.push(color(CYAN, "└" + "─".repeat(width) + "┘"));
   return out.join("\n");
 }
@@ -74,5 +75,5 @@ export const logger = {
   line,
   color,
   colors: { RESET, BOLD, DIM, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN },
-  stripAnsi
+  stripAnsi,
 };

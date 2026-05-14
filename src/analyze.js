@@ -40,9 +40,15 @@ function summarize(entries) {
   }
 
   const top = [...entries].sort((a, b) => b.size - a.size).slice(0, 8);
-  const hasManifest = entries.some((e) => e.name === "AndroidManifest.xml" || e.name.endsWith("/AndroidManifest.xml"));
+  const hasManifest = entries.some(
+    (e) =>
+      e.name === "AndroidManifest.xml" ||
+      e.name.endsWith("/AndroidManifest.xml")
+  );
   const dexCount = entries.filter((e) => e.name.endsWith(".dex")).length;
-  const nativeLibCount = entries.filter((e) => e.name.startsWith("lib/") && e.name.endsWith(".so")).length;
+  const nativeLibCount = entries.filter(
+    (e) => e.name.startsWith("lib/") && e.name.endsWith(".so")
+  ).length;
 
   return { total, count, extMap, top, hasManifest, dexCount, nativeLibCount };
 }
@@ -61,7 +67,10 @@ export async function analyzeApk(apkPath) {
   logger.bullet("File", resolved);
   logger.bullet("Entries", String(summary.count));
   logger.bullet("Total size", humanBytes(summary.total));
-  logger.bullet("AndroidManifest.xml", summary.hasManifest ? "found" : "missing");
+  logger.bullet(
+    "AndroidManifest.xml",
+    summary.hasManifest ? "found" : "missing"
+  );
   logger.bullet("DEX files", String(summary.dexCount));
   logger.bullet("Native libs", String(summary.nativeLibCount));
 
@@ -71,7 +80,9 @@ export async function analyzeApk(apkPath) {
   }
 
   logger.section("Size by extension");
-  const sortedExt = [...summary.extMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const sortedExt = [...summary.extMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
   for (const [ext, size] of sortedExt) {
     logger.bullet(ext, humanBytes(size));
   }

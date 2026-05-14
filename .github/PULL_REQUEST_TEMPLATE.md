@@ -27,9 +27,9 @@ Please check what applies:
 
 List your changes:
 
-- 
-- 
-- 
+-
+-
+-
 
 ---
 

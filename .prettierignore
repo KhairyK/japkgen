@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+coverage/
+.github/
+logs/
+*.md
+web/
+.prettierrc
+.prettierignore

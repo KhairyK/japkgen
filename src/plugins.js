@@ -20,8 +20,8 @@ function normalizePlugin(plugin, origin = "unknown") {
       beforeGenerate: [],
       afterGenerate: [],
       beforeWrite: [],
-      afterWrite: []
-    }
+      afterWrite: [],
+    },
   };
 
   if (plugin.templates && typeof plugin.templates === "object") {
@@ -116,7 +116,7 @@ export async function loadPlugins(projectDir = process.cwd()) {
     beforeGenerate: [],
     afterGenerate: [],
     beforeWrite: [],
-    afterWrite: []
+    afterWrite: [],
   };
 
   for (const plugin of plugins) {

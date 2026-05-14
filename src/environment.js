@@ -1,7 +1,11 @@
 import os from "node:os";
 import path from "node:path";
 import { DEFAULTS } from "./constants.js";
-import { detectCommand, fileExistsAny, getDefaultAndroidSdkPaths } from "./utils.js";
+import {
+  detectCommand,
+  fileExistsAny,
+  getDefaultAndroidSdkPaths,
+} from "./utils.js";
 
 async function runVersionCheck(command, args) {
   try {
@@ -11,12 +15,12 @@ async function runVersionCheck(command, args) {
     const result = await runCommand(command, args, { reject: false });
     return {
       ok: result.ok,
-      output: String((result.stderr || result.stdout || "").trim())
+      output: String((result.stderr || result.stdout || "").trim()),
     };
   } catch (error) {
     return {
       ok: false,
-      output: String(error?.message || error || "")
+      output: String(error?.message || error || ""),
     };
   }
 }
@@ -39,7 +43,7 @@ export async function detectEnvironment() {
     packageManagers: {
       npm: await runVersionCheck("npm", ["--version"]),
       pnpm: await runVersionCheck("pnpm", ["--version"]),
-      yarn: await runVersionCheck("yarn", ["--version"])
+      yarn: await runVersionCheck("yarn", ["--version"]),
     },
     java: await runVersionCheck("java", ["-version"]),
     gradle: await runVersionCheck("gradle", ["-v"]),
@@ -50,13 +54,15 @@ export async function detectEnvironment() {
     sdkBuildTools: null,
     gradleWrapper: false,
     recommendedJava: DEFAULTS.javaVersion,
-    git: await runVersionCheck("git", ["--version"])
+    git: await runVersionCheck("git", ["--version"]),
   };
 
   if (env.sdkRoot) {
     env.hasSdkRoot = true;
-    env.sdkPlatformTools = (await fileExistsAny([path.join(env.sdkRoot, "platform-tools")])) || null;
-    env.sdkBuildTools = (await fileExistsAny([path.join(env.sdkRoot, "build-tools")])) || null;
+    env.sdkPlatformTools =
+      (await fileExistsAny([path.join(env.sdkRoot, "platform-tools")])) || null;
+    env.sdkBuildTools =
+      (await fileExistsAny([path.join(env.sdkRoot, "build-tools")])) || null;
   }
 
   return env;

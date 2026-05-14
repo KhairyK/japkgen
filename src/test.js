@@ -14,7 +14,7 @@ function check(ok, label, details = "") {
 function expectedMainSource(projectDir) {
   return [
     path.join(projectDir, "app", "src", "main", "java"),
-    path.join(projectDir, "app", "src", "main", "kotlin")
+    path.join(projectDir, "app", "src", "main", "kotlin"),
   ];
 }
 
@@ -23,7 +23,7 @@ export async function runProjectTests(projectDirArg = process.cwd()) {
   const report = {
     projectDir,
     ok: true,
-    checks: []
+    checks: [],
   };
 
   logger.title("JAPKGEN Test");
@@ -31,7 +31,7 @@ export async function runProjectTests(projectDirArg = process.cwd()) {
   const mustHave = [
     path.join(projectDir, "app", "src", "main", "AndroidManifest.xml"),
     path.join(projectDir, "app", "build.gradle"),
-    path.join(projectDir, "settings.gradle")
+    path.join(projectDir, "settings.gradle"),
   ];
 
   for (const file of mustHave) {
@@ -41,7 +41,11 @@ export async function runProjectTests(projectDirArg = process.cwd()) {
     check(ok, path.relative(projectDir, file));
   }
 
-  const manifests = await findFiles(path.join(projectDir, "app", "src", "main"), (abs, rel) => rel.endsWith("AndroidManifest.xml"), { maxDepth: 4 });
+  const manifests = await findFiles(
+    path.join(projectDir, "app", "src", "main"),
+    (abs, rel) => rel.endsWith("AndroidManifest.xml"),
+    { maxDepth: 4 }
+  );
   if (manifests.length) {
     const manifest = await readText(manifests[0].abs);
     check(manifest.includes("<application"), "Manifest structure");
@@ -53,20 +57,34 @@ export async function runProjectTests(projectDirArg = process.cwd()) {
 
   let sourceCount = 0;
   for (const root of expectedMainSource(projectDir)) {
-    const files = await findFiles(root, (abs, rel) => rel.endsWith(".java") || rel.endsWith(".kt"), { maxDepth: 8 });
+    const files = await findFiles(
+      root,
+      (abs, rel) => rel.endsWith(".java") || rel.endsWith(".kt"),
+      { maxDepth: 8 }
+    );
     sourceCount += files.length;
     if (files.length) {
-      logger.info(`Source files detected in ${path.relative(projectDir, root)}: ${files.length}`);
+      logger.info(
+        `Source files detected in ${path.relative(projectDir, root)}: ${files.length}`
+      );
     }
   }
   check(sourceCount > 0, "Source files detected", "MainActivity is missing?");
   report.checks.push({ file: "source-files", ok: sourceCount > 0 });
 
-  const assetFiles = await findFiles(path.join(projectDir, "app", "src", "main", "assets"), (abs, rel) => rel.endsWith(".html") || rel.endsWith(".js") || rel.endsWith(".css"), { maxDepth: 8 });
+  const assetFiles = await findFiles(
+    path.join(projectDir, "app", "src", "main", "assets"),
+    (abs, rel) =>
+      rel.endsWith(".html") || rel.endsWith(".js") || rel.endsWith(".css"),
+    { maxDepth: 8 }
+  );
   if (assetFiles.length) {
     logger.info(`Assets detected: ${assetFiles.length} file(s)`);
-    const hasHttpUrlLike = (await readText(assetFiles[0].abs)).match(/https?:\/\//i);
-    if (hasHttpUrlLike) logger.note("A URL was detected inside the asset shell.");
+    const hasHttpUrlLike = (await readText(assetFiles[0].abs)).match(
+      /https?:\/\//i
+    );
+    if (hasHttpUrlLike)
+      logger.note("A URL was detected inside the asset shell.");
   }
 
   const readmeExists = await fileExists(path.join(projectDir, "README.md"));
@@ -75,7 +93,7 @@ export async function runProjectTests(projectDirArg = process.cwd()) {
   logger.plain("");
   logger.box("Summary", [
     `Project: ${projectDir}`,
-    `Status: ${report.ok ? "READY" : "INCOMPLETE"}`
+    `Status: ${report.ok ? "READY" : "INCOMPLETE"}`,
   ]);
 
   return report;

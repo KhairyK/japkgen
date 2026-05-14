@@ -1,0 +1,10 @@
+# TEST LOG
+TITLE: PASS-game-cpp
+TIME: 2026-05-14T04:22:17.983Z
+
+{
+  status: 'PASS',
+  template: 'game-cpp',
+  projectDir: '/tmp/japkgen-test-Gw5RVM/Game Cpp Sample',
+  durationMs: 26
+}

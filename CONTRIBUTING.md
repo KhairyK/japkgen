@@ -66,7 +66,7 @@ src
 ├── signing.js
 ├── templates.js
 ├── types.js
-└── utils.js          
+└── utils.js
 ```
 
 ---

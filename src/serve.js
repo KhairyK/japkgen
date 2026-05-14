@@ -18,7 +18,7 @@ const MIME = {
   ".jpeg": "image/jpeg",
   ".svg": "image/svg+xml",
   ".webmanifest": "application/manifest+json; charset=utf-8",
-  ".txt": "text/plain; charset=utf-8"
+  ".txt": "text/plain; charset=utf-8",
 };
 
 function mimeFor(filePath) {
@@ -29,7 +29,7 @@ async function readIndexFile(rootDir) {
   const candidates = [
     path.join(rootDir, "index.html"),
     path.join(rootDir, "app", "src", "main", "assets", "www", "index.html"),
-    path.join(rootDir, "public", "index.html")
+    path.join(rootDir, "public", "index.html"),
   ];
   for (const candidate of candidates) {
     if (await fileExists(candidate)) return candidate;
@@ -39,10 +39,16 @@ async function readIndexFile(rootDir) {
 
 function injectLiveReload(html, clientPath = "/__japkgen_live_reload.js") {
   if (html.includes(clientPath)) return html;
-  return html.replace(/<\/body>/i, `<script src="${clientPath}"></script></body>`);
+  return html.replace(
+    /<\/body>/i,
+    `<script src="${clientPath}"></script></body>`
+  );
 }
 
-export async function serveProject(projectDirArg = process.cwd(), { port = 4173, watch = true } = {}) {
+export async function serveProject(
+  projectDirArg = process.cwd(),
+  { port = 4173, watch = true } = {}
+) {
   const projectDir = path.resolve(projectDirArg);
   let rootDir = projectDir;
   const preferredIndex = await readIndexFile(projectDir);
@@ -58,7 +64,7 @@ export async function serveProject(projectDirArg = process.cwd(), { port = 4173,
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
-        "Access-Control-Allow-Origin": "*"
+        "Access-Control-Allow-Origin": "*",
       });
       res.write(`event: hello\ndata: ready\n\n`);
       clients.add(res);
@@ -67,7 +73,10 @@ export async function serveProject(projectDirArg = process.cwd(), { port = 4173,
     }
 
     if (url.pathname === "/__japkgen_live_reload.js") {
-      res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-cache" });
+      res.writeHead(200, {
+        "Content-Type": "application/javascript; charset=utf-8",
+        "Cache-Control": "no-cache",
+      });
       res.end(`
         const source = new EventSource('/__japkgen_events');
         source.addEventListener('reload', () => location.reload());
@@ -119,7 +128,9 @@ export async function serveProject(projectDirArg = process.cwd(), { port = 4173,
       });
       logger.note("Live reload aktif.");
     } catch {
-      logger.warn("File watcher tidak tersedia di platform ini. Serve tetap jalan tanpa live reload.");
+      logger.warn(
+        "File watcher tidak tersedia di platform ini. Serve tetap jalan tanpa live reload."
+      );
     }
   }
 
@@ -127,11 +138,13 @@ export async function serveProject(projectDirArg = process.cwd(), { port = 4173,
     close: async () => {
       watcher?.close?.();
       for (const res of clients) {
-        try { res.end(); } catch {}
+        try {
+          res.end();
+        } catch {}
       }
       await new Promise((resolve) => server.close(resolve));
     },
     server,
-    rootDir
+    rootDir,
   };
 }

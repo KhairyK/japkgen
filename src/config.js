@@ -5,11 +5,13 @@ import { fileExists, readJson } from "./utils.js";
 export const CONFIG_FILES = [
   "japkgen.config.mjs",
   "japkgen.config.js",
-  "japkgen.config.json"
+  "japkgen.config.json",
 ];
 
 function normalizeObject(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
 }
 
 function pickConfigRoot(raw) {
@@ -24,7 +26,7 @@ function normalizeConfig(raw, filePath = null) {
   const defaults = {
     ...normalizeObject(root.defaults),
     ...normalizeObject(root.default),
-    ...normalizeObject(root.settings)
+    ...normalizeObject(root.settings),
   };
 
   for (const key of [
@@ -46,7 +48,8 @@ function normalizeConfig(raw, filePath = null) {
     "variant",
     "port",
     "watch",
-    "gradleVersion"
+    "gradleVersion",
+    "reactPlugins",
   ]) {
     if (root[key] !== undefined && defaults[key] === undefined) {
       defaults[key] = root[key];
@@ -58,7 +61,7 @@ function normalizeConfig(raw, filePath = null) {
     raw: root,
     defaults,
     plugins: Array.isArray(root.plugins) ? root.plugins : [],
-    templates: normalizeObject(root.templates)
+    templates: normalizeObject(root.templates),
   };
 }
 

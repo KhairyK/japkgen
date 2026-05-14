@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import AOS from 'aos';
-import { motion } from 'framer-motion';
-import { Toaster, toast } from 'sonner';
-import './aos.css';
+import React, { useEffect, useState } from "react";
+import AOS from "aos";
+import { motion } from "framer-motion";
+import { Toaster, toast } from "sonner";
+import "./aos.css";
 import {
   Terminal,
   Cpu,
@@ -27,159 +27,159 @@ import {
   Package,
   Wrench,
   Code2,
-} from 'lucide-react';
+} from "lucide-react";
 
 const features = [
   {
     icon: <Zap />,
-    title: 'Instant Scaffolding',
-    desc: 'Generate Android, hybrid, native, and frontend project structures in seconds.',
+    title: "Instant Scaffolding",
+    desc: "Generate Android, hybrid, native, and frontend project structures in seconds.",
   },
   {
     icon: <Globe />,
-    title: 'WebView and Web APK',
-    desc: 'Turn a website or frontend stack into an Android package with a clean workflow.',
+    title: "WebView and Web APK",
+    desc: "Turn a website or frontend stack into an Android package with a clean workflow.",
   },
   {
     icon: <Smartphone />,
-    title: 'Native Starter',
-    desc: 'Use a practical Android boilerplate designed for clarity and maintainability.',
+    title: "Native Starter",
+    desc: "Use a practical Android boilerplate designed for clarity and maintainability.",
   },
   {
     icon: <Code2 />,
-    title: 'C and C++ Templates',
-    desc: 'Create native game and app scaffolds with CMake and Make support.',
+    title: "C and C++ Templates",
+    desc: "Create native game and app scaffolds with CMake and Make support.",
   },
   {
     icon: <ShieldCheck />,
-    title: 'Signing Scaffold',
-    desc: 'Prepare release signing files and keystore configuration with simple CLI input.',
+    title: "Signing Scaffold",
+    desc: "Prepare release signing files and keystore configuration with simple CLI input.",
   },
   {
     icon: <Settings />,
-    title: 'Smart CLI Prompts',
-    desc: 'Use prompts-based interactive input with better debug-friendly output.',
+    title: "Smart CLI Prompts",
+    desc: "Use prompts-based interactive input with better debug-friendly output.",
   },
   {
     icon: <Palette />,
-    title: 'Modern Frontend Stack',
-    desc: 'React, Vue, Angular, and Preact templates use Vite and modern frontend defaults.',
+    title: "Modern Frontend Stack",
+    desc: "React, Vue, Angular, and Preact templates use Vite and modern frontend defaults.",
   },
   {
     icon: <Package />,
-    title: 'Web APK UI Stack',
-    desc: 'Tailwind CSS, Material UI, and Material Icons support for web-focused APK projects.',
+    title: "Web APK UI Stack",
+    desc: "Tailwind CSS, Material UI, and Material Icons support for web-focused APK projects.",
   },
   {
     icon: <Wrench />,
-    title: 'XML to JSON Helper',
-    desc: 'Generate and use XML-to-JSON helpers for Web APK workflows when needed.',
+    title: "XML to JSON Helper",
+    desc: "Generate and use XML-to-JSON helpers for Web APK workflows when needed.",
   },
 ];
 
 const templates = [
   {
     icon: <Layers />,
-    name: 'WebView',
-    desc: 'Android container for websites with navigation, loading, and offline-friendly structure.',
+    name: "WebView",
+    desc: "Android container for websites with navigation, loading, and offline-friendly structure.",
   },
   {
     icon: <Globe />,
-    name: 'Web APK',
-    desc: 'Frontend-driven APK template with Tailwind, Material UI, and XML2JSON support.',
+    name: "Web APK",
+    desc: "Frontend-driven APK template with Tailwind, Material UI, and XML2JSON support.",
   },
   {
     icon: <Smartphone />,
-    name: 'Native',
-    desc: 'Minimal Android starter for straightforward app development.',
+    name: "Native",
+    desc: "Minimal Android starter for straightforward app development.",
   },
   {
     icon: <Code2 />,
-    name: 'Kotlin',
-    desc: 'Optimized Kotlin template for clean and practical Android workflows.',
+    name: "Kotlin",
+    desc: "Optimized Kotlin template for clean and practical Android workflows.",
   },
   {
     icon: <Cpu />,
-    name: 'Compose',
-    desc: 'Jetpack Compose starter with modern Android UI defaults.',
+    name: "Compose",
+    desc: "Jetpack Compose starter with modern Android UI defaults.",
   },
   {
     icon: <Box />,
-    name: 'Game Java',
-    desc: 'Canvas-style game scaffold for Java-based Android projects.',
+    name: "Game Java",
+    desc: "Canvas-style game scaffold for Java-based Android projects.",
   },
   {
     icon: <Code2 />,
-    name: 'Game C++',
-    desc: 'Native game scaffold with CMake integration and C/C++ support.',
+    name: "Game C++",
+    desc: "Native game scaffold with CMake integration and C/C++ support.",
   },
   {
     icon: <Package />,
-    name: 'React',
-    desc: 'Vite-powered React template for web and Android-integrated workflows.',
+    name: "React",
+    desc: "Vite-powered React template for web and Android-integrated workflows.",
   },
   {
     icon: <Package />,
-    name: 'Vue',
-    desc: 'Vite-powered Vue template for modern frontend scaffolding.',
+    name: "Vue",
+    desc: "Vite-powered Vue template for modern frontend scaffolding.",
   },
   {
     icon: <Package />,
-    name: 'Angular',
-    desc: 'TypeScript-first Angular template with Vite optimization.',
+    name: "Angular",
+    desc: "TypeScript-first Angular template with Vite optimization.",
   },
   {
     icon: <Package />,
-    name: 'Preact',
-    desc: 'Lightweight Vite-powered Preact template for compact frontend builds.',
+    name: "Preact",
+    desc: "Lightweight Vite-powered Preact template for compact frontend builds.",
   },
   {
     icon: <FileCode />,
-    name: 'C',
-    desc: 'Native C template with CMake and Make scaffolding.',
+    name: "C",
+    desc: "Native C template with CMake and Make scaffolding.",
   },
   {
     icon: <FileCode />,
-    name: 'C++',
-    desc: 'Native C++ template with CMake and Make scaffolding.',
+    name: "C++",
+    desc: "Native C++ template with CMake and Make scaffolding.",
   },
 ];
 
 const commands = [
   {
-    cmd: 'new',
-    args: '--name, --package, --template, --min-sdk, --target-sdk, --compile-sdk',
-    desc: 'Creates a new project from a template with interactive or flag-based input.',
+    cmd: "new",
+    args: "--name, --package, --template, --min-sdk, --target-sdk, --compile-sdk",
+    desc: "Creates a new project from a template with interactive or flag-based input.",
   },
   {
-    cmd: 'build',
-    args: '[projectDir], --variant, --gradle-version',
-    desc: 'Builds an existing project into an APK using the available Gradle setup.',
+    cmd: "build",
+    args: "[projectDir], --variant, --gradle-version",
+    desc: "Builds an existing project into an APK using the available Gradle setup.",
   },
   {
-    cmd: 'doctor',
-    args: 'None',
-    desc: 'Checks whether the local Android environment is ready.',
+    cmd: "doctor",
+    args: "None",
+    desc: "Checks whether the local Android environment is ready.",
   },
   {
-    cmd: 'serve',
-    args: '[projectDir], --port, --watch',
-    desc: 'Starts a local preview server for supported project types.',
+    cmd: "serve",
+    args: "[projectDir], --port, --watch",
+    desc: "Starts a local preview server for supported project types.",
   },
   {
-    cmd: 'keystore create',
-    args: '--path, --alias, --store-password, --key-password',
-    desc: 'Creates a release keystore and signing scaffold.',
+    cmd: "keystore create",
+    args: "--path, --alias, --store-password, --key-password",
+    desc: "Creates a release keystore and signing scaffold.",
   },
   {
-    cmd: 'test',
-    args: '[projectDir]',
-    desc: 'Validates generated project structure and template output.',
+    cmd: "test",
+    args: "[projectDir]",
+    desc: "Validates generated project structure and template output.",
   },
   {
-    cmd: 'analyze',
-    args: '<file.apk>',
-    desc: 'Inspects an APK and reports useful package details.',
+    cmd: "analyze",
+    args: "<file.apk>",
+    desc: "Inspects an APK and reports useful package details.",
   },
 ];
 
@@ -208,27 +208,27 @@ const itemVariants = {
   },
 };
 
-const NEWS_API_URL = 'https://japkgen.opendnf.cloud/api/news.php?limit=6';
+const NEWS_API_URL = "https://japkgen.opendnf.cloud/api/news.php?limit=6";
 
 const App = () => {
   const [copied, setCopied] = useState(false);
   const [news, setNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(true);
-  const [newsError, setNewsError] = useState('');
+  const [newsError, setNewsError] = useState("");
 
   useEffect(() => {
     AOS.init({
       duration: 1000,
       once: false,
       mirror: true,
-      easing: 'ease-out-cubic',
+      easing: "ease-out-cubic",
     });
   }, []);
 
   const scrollToSection = (id) => {
     document.getElementById(id)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
+      behavior: "smooth",
+      block: "start",
     });
   };
 
@@ -237,32 +237,32 @@ const App = () => {
       await navigator.clipboard.writeText(text);
       setCopied(true);
 
-      toast.success('Command copied to clipboard.', {
+      toast.success("Command copied to clipboard.", {
         description: text,
       });
 
       window.setTimeout(() => setCopied(false), 1500);
     } catch (error) {
-      console.error('Clipboard copy failed:', error);
-      toast.error('Failed to copy the command.');
+      console.error("Clipboard copy failed:", error);
+      toast.error("Failed to copy the command.");
     }
   };
 
-  const installCommand = 'npm install -g japkgen';
+  const installCommand = "npm install -g japkgen";
 
   const loadNews = async () => {
     try {
       setNewsLoading(true);
-      setNewsError('');
+      setNewsError("");
 
-      const res = await fetch(NEWS_API_URL, { cache: 'no-store' });
+      const res = await fetch(NEWS_API_URL, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const payload = await res.json();
       setNews(Array.isArray(payload?.data) ? payload.data : []);
     } catch (err) {
-      console.error('Failed to load news:', err);
-      setNewsError('Failed to load news feed.');
+      console.error("Failed to load news:", err);
+      setNewsError("Failed to load news feed.");
       setNews([]);
     } finally {
       setNewsLoading(false);
@@ -273,6 +273,24 @@ const App = () => {
     loadNews();
   }, []);
 
+  const allowedRoutes = {
+    home: "/",
+    docs: "/docs/",
+    github: "https://github.com/KhairyK/japkgen",
+    npm: "https://npm.im/japkgen"
+  };
+
+  function safeRedirect(key) {
+    const target = allowedRoutes[key];
+
+    if (!target) {
+      console.error("Invalid redirect");
+      return;
+    }
+
+    window.location.assign(target);
+  }
+
   return (
     <div className="min-h-screen bg-[#070b14] text-slate-200 font-sans selection:bg-indigo-500/40 selection:text-white overflow-x-hidden">
       <Toaster
@@ -281,9 +299,9 @@ const App = () => {
         closeButton
         toastOptions={{
           style: {
-            background: '#0c111b',
-            border: '1px solid #1e293b',
-            color: '#e2e8f0',
+            background: "#0c111b",
+            border: "1px solid #1e293b",
+            color: "#e2e8f0",
           },
         }}
       />
@@ -298,19 +316,19 @@ const App = () => {
         <motion.div
           className="absolute top-[-8rem] left-1/2 -translate-x-1/2 w-[50rem] h-[50rem] rounded-full bg-indigo-500/10 blur-3xl"
           animate={{ y: [0, 18, 0] }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           className="absolute bottom-[-10rem] right-[-8rem] w-[34rem] h-[34rem] rounded-full bg-cyan-500/10 blur-3xl"
           animate={{ y: [0, -14, 0] }}
-          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
       <nav className="fixed top-0 w-full z-[100] bg-[#070b14]/75 backdrop-blur-xl border-b border-slate-800/80">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <button
-            onClick={() => scrollToSection('top')}
+            onClick={() => scrollToSection("top")}
             className="flex items-center space-x-3 group"
             aria-label="Go to top"
           >
@@ -318,37 +336,37 @@ const App = () => {
               <Terminal size={20} className="text-white" />
             </div>
             <span className="font-bold text-xl tracking-tight text-white font-mono">
-              japkgen
+              JAPKGen
             </span>
           </button>
 
           <div className="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-300">
             <button
-              onClick={() => scrollToSection('features')}
+              onClick={() => scrollToSection("features")}
               className="hover:text-indigo-400 transition-colors"
             >
               Features
             </button>
             <button
-              onClick={() => scrollToSection('news')}
+              onClick={() => scrollToSection("news")}
               className="hover:text-indigo-400 transition-colors"
             >
               News
             </button>
             <button
-              onClick={() => scrollToSection('templates')}
+              onClick={() => scrollToSection("templates")}
               className="hover:text-indigo-400 transition-colors"
             >
               Templates
             </button>
             <button
-              onClick={() => scrollToSection('commands')}
+              onClick={() => scrollToSection("commands")}
               className="hover:text-indigo-400 transition-colors"
             >
               Commands
             </button>
             <button
-              onClick={() => scrollToSection('structure')}
+              onClick={() => scrollToSection("structure")}
               className="hover:text-indigo-400 transition-colors"
             >
               Structure
@@ -360,7 +378,7 @@ const App = () => {
             onClick={() => copyToClipboard(installCommand)}
           >
             <GitBranch size={16} />
-            <span>{copied ? 'Copied' : 'Copy Install Command'}</span>
+            <span>{copied ? "Copied" : "Copy Install Command"}</span>
           </button>
         </div>
       </nav>
@@ -397,9 +415,10 @@ const App = () => {
             variants={itemVariants}
             className="text-base md:text-lg text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed"
           >
-            <span className="text-slate-200 font-semibold italic">japkgen</span>{' '}
-            helps developers scaffold Android, WebView, Web APK, native, and frontend-integrated
-            projects directly from the terminal with a clean beta workflow.
+            <span className="text-slate-200 font-semibold italic">japkgen</span>{" "}
+            helps developers scaffold Android, WebView, Web APK, native, and
+            frontend-integrated projects directly from the terminal with a clean
+            beta workflow.
           </motion.p>
 
           <motion.div
@@ -433,7 +452,8 @@ const App = () => {
                 <CheckCircle2 size={12} className="text-indigo-500" /> Reliable
               </span>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 size={12} className="text-indigo-500" /> Open Source
+                <CheckCircle2 size={12} className="text-indigo-500" /> Open
+                Source
               </span>
             </div>
           </motion.div>
@@ -446,10 +466,10 @@ const App = () => {
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 0.7, y: 0 }}
           viewport={{ once: true, amount: 0.35 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <img
-            src="https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=node.js&logoColor=white"
+            src="https://img.shields.io/badge/Node.js-LTS_Only-339933?style=for-the-badge&logo=node.js&logoColor=white"
             alt="Node"
           />
           <img
@@ -473,8 +493,8 @@ const App = () => {
             Core Capabilities
           </h2>
           <p className="text-slate-400 max-w-2xl mx-auto">
-            Everything you need to start Android and hybrid project scaffolding with clarity and
-            without unnecessary overhead.
+            Everything you need to start Android and hybrid project scaffolding
+            with clarity and without unnecessary overhead.
           </p>
         </div>
 
@@ -492,7 +512,7 @@ const App = () => {
               data-aos="fade-up"
               data-aos-delay={index * 60}
               whileHover={{ y: -6 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
               className="group p-8 rounded-3xl bg-[#0c111b]/90 border border-slate-800/80 hover:border-indigo-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/10"
             >
               <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-300 mb-6 group-hover:scale-110 group-hover:bg-indigo-500/15 transition-all duration-300">
@@ -523,8 +543,9 @@ const App = () => {
               Latest Updates
             </h2>
             <p className="text-slate-400 max-w-2xl">
-              Release notes, fixes, and project updates shown in one place so visitors can follow
-              what is changing without digging through the repository first.
+              Release notes, fixes, and project updates shown in one place so
+              visitors can follow what is changing without digging through the
+              repository first.
             </p>
           </div>
 
@@ -562,7 +583,7 @@ const App = () => {
                 key={item.id ?? index}
                 variants={itemVariants}
                 whileHover={{ y: -6 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
                 className="group p-6 rounded-3xl bg-[#0c111b]/90 border border-slate-800/80 hover:border-cyan-500/40 transition-all duration-300 hover:shadow-xl hover:shadow-cyan-500/10"
               >
                 <div className="flex items-center justify-between gap-3 mb-4">
@@ -579,7 +600,7 @@ const App = () => {
                     ) : null}
                   </div>
                   <span className="text-[11px] text-slate-500">
-                    {item.date || ''}
+                    {item.date || ""}
                   </span>
                 </div>
 
@@ -616,8 +637,9 @@ const App = () => {
               Templates
             </h2>
             <p className="text-slate-400 max-w-2xl mx-auto">
-              JAPKGEN ships with Android, native, web, and frontend templates so you can start from
-              the right foundation instead of assembling everything by hand.
+              JAPKGEN ships with Android, native, web, and frontend templates so
+              you can start from the right foundation instead of assembling
+              everything by hand.
             </p>
           </div>
 
@@ -633,14 +655,18 @@ const App = () => {
                 key={index}
                 variants={itemVariants}
                 whileHover={{ y: -5 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
                 className="p-6 rounded-3xl bg-[#0c111b]/90 border border-slate-800/80 hover:border-indigo-500/40 transition-all"
               >
                 <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 text-indigo-300 flex items-center justify-center mb-5">
                   {item.icon}
                 </div>
-                <h3 className="text-white font-bold text-lg mb-2">{item.name}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
+                <h3 className="text-white font-bold text-lg mb-2">
+                  {item.name}
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  {item.desc}
+                </p>
               </motion.div>
             ))}
           </motion.div>
@@ -691,7 +717,7 @@ const App = () => {
             initial={{ opacity: 0, scale: 0.98, y: 20 }}
             whileInView={{ opacity: 1, scale: 1, y: 0 }}
             viewport={{ once: true, amount: 0.25 }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           >
             <h3 className="text-2xl font-bold text-white mb-8 flex items-center gap-3">
               <FileCode className="text-indigo-400" /> Standardized Structure
@@ -729,16 +755,16 @@ const App = () => {
 
               <div className="text-slate-400 text-sm flex flex-col justify-center">
                 <p className="mb-4 italic leading-relaxed">
-                  “japkgen keeps the generated structure predictable so projects can be opened,
-                  inspected, and extended without extra cleanup.”
+                  “japkgen keeps the generated structure predictable so projects
+                  can be opened, inspected, and extended without extra cleanup.”
                 </p>
                 <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 text-[12px] space-y-2">
                   <p className="flex justify-between gap-6">
-                    <span>Minimum Node:</span>{' '}
+                    <span>Minimum Node:</span>{" "}
                     <span className="text-white">v18.0.0</span>
                   </p>
                   <p className="flex justify-between gap-6">
-                    <span>Java Version:</span>{' '}
+                    <span>Java Version:</span>{" "}
                     <span className="text-white">JDK 17</span>
                   </p>
                 </div>
@@ -756,14 +782,14 @@ const App = () => {
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.85, ease: 'easeOut' }}
+          transition={{ duration: 0.85, ease: "easeOut" }}
         >
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-8">
             Ready to Build Your First APK?
           </h2>
           <p className="text-slate-400 mb-10 max-w-xl mx-auto leading-relaxed">
-            Install JAPKGEN, pick a template, and start generating project scaffolds without the
-            usual setup drag.
+            Install JAPKGEN, pick a template, and start generating project
+            scaffolds without the usual setup drag.
           </p>
 
           <div className="flex flex-wrap justify-center gap-4">
@@ -774,16 +800,16 @@ const App = () => {
               className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2"
             >
               <Download size={18} />
-              {copied ? 'Copied to Clipboard' : 'Install japkgen'}
+              {copied ? "Copied to Clipboard" : "Install japkgen"}
             </motion.button>
 
             <motion.button
               whileHover={{ y: -3, scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => scrollToSection('templates')}
+              onClick={() => safeRedirect("docs")}
               className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-4 rounded-2xl font-bold border border-slate-700 transition-all flex items-center gap-2"
             >
-              Explore Templates <ArrowRight size={18} />
+              Documentation <ArrowRight size={18} />
             </motion.button>
           </div>
         </motion.div>
@@ -796,7 +822,7 @@ const App = () => {
               <Terminal size={16} className="text-indigo-400" />
             </div>
             <span className="font-bold text-white tracking-widest font-mono">
-              japkgen
+              JAPKGen
             </span>
           </div>
 

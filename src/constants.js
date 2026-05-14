@@ -16,7 +16,7 @@ export const DEFAULTS = {
   keystoreFile: "./release.keystore",
   keystoreAlias: "release",
   keystoreStorePassword: "changeit",
-  keystoreKeyPassword: "changeit"
+  keystoreKeyPassword: "changeit",
 };
 
 export const ANDROIDX = {
@@ -27,35 +27,39 @@ export const ANDROIDX = {
   activityKtx: "androidx.activity:activity-ktx:1.9.2",
   activityCompose: "androidx.activity:activity-compose:1.9.2",
   swipeRefresh: "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0",
-  webkit: "androidx.webkit:webkit:1.11.0"
+  webkit: "androidx.webkit:webkit:1.11.0",
 };
 
 export const COMPOSE = {
   bom: "2024.10.00",
-  material3: "1.3.1"
+  material3: "1.3.1",
 };
 
 export const SUPPORTED_TEMPLATES = [
   "webview",
   "pwa",
+  "bedbox",
   "react",
+  "solidjs",
   "vue",
   "angular",
   "preact",
   "native",
+  "toybox",
   "compose",
   "kotlin",
+  "nextbox",
   "c",
   "cpp",
   "cmake",
   "make",
   "game-java",
-  "game-cpp"
+  "game-cpp",
 ];
 
 export const PLUGIN_CONFIG_FILES = [
   "japkgen.plugins.mjs",
   "japkgen.plugins.js",
   "japkgen.plugin.mjs",
-  "japkgen.plugin.js"
+  "japkgen.plugin.js",
 ];

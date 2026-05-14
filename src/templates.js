@@ -1,12 +1,18 @@
 import path from "node:path";
 import { ANDROIDX, COMPOSE, DEFAULTS } from "./constants.js";
-import { uniq } from "./utils.js";
+import { parseList, uniq } from "./utils.js";
 
 function joinLines(lines = []) {
   return lines.filter(Boolean).join("\n");
 }
 
-function makeReadme({ appName, templateTitle, templateSummary, templateNotes, setupNotes = [] }) {
+function makeReadme({
+  appName,
+  templateTitle,
+  templateSummary,
+  templateNotes,
+  setupNotes = [],
+}) {
   return `# ${appName}
 
 [![Generated with JAPKGEN](https://img.shields.io/badge/generated%20with-JAPKGEN-3DDC84?style=for-the-badge)](#)
@@ -28,7 +34,13 @@ ${templateNotes}
 ${setupNotes.length ? `\n## Setup\n\n${setupNotes.map((line) => `- ${line}`).join("\n")}\n` : ""}`;
 }
 
-function frameworkReadme({ appName, frameworkName, summary, setupSteps, notes }) {
+function frameworkReadme({
+  appName,
+  frameworkName,
+  summary,
+  setupSteps,
+  notes,
+}) {
   return `# ${appName}
 
 [![Generated with JAPKGEN](https://img.shields.io/badge/generated%20with-JAPKGEN-3DDC84?style=for-the-badge)](#)
@@ -56,11 +68,13 @@ ${notes}
 function buildRootBuildGradle({ includeCompose = false } = {}) {
   const plugins = [
     "    id 'com.android.application' version '__AGP_VERSION__' apply false",
-    "    id 'org.jetbrains.kotlin.android' version '__KOTLIN_VERSION__' apply false"
+    "    id 'org.jetbrains.kotlin.android' version '__KOTLIN_VERSION__' apply false",
   ];
 
   if (includeCompose) {
-    plugins.push("    id 'org.jetbrains.kotlin.plugin.compose' version '__KOTLIN_VERSION__' apply false");
+    plugins.push(
+      "    id 'org.jetbrains.kotlin.plugin.compose' version '__KOTLIN_VERSION__' apply false"
+    );
   }
 
   return `plugins {
@@ -104,15 +118,19 @@ function buildAppGradle({
   extraAndroidBlock = "",
   buildFeaturesBlock = "",
   composeBlock = "",
-  allowCleartextTraffic = true
+  allowCleartextTraffic = true,
 }) {
   const plugins = [
     "    id 'com.android.application'",
-    ...appPlugins.map((line) => `    ${line}`)
+    ...appPlugins.map((line) => `    ${line}`),
   ].join("\n");
 
-  const depLines = uniq(dependencies).map((d) => `    implementation '${d}'`).join("\n");
-  const cleartextLine = allowCleartextTraffic ? "        android:usesCleartextTraffic=\"true\"" : "";
+  const depLines = uniq(dependencies)
+    .map((d) => `    implementation '${d}'`)
+    .join("\n");
+  const cleartextLine = allowCleartextTraffic
+    ? '        android:usesCleartextTraffic="true"'
+    : "";
 
   return `import java.util.Properties
 import java.io.FileInputStream
@@ -179,8 +197,14 @@ ${depLines}
 `;
 }
 
-function buildAndroidManifest({ themeName = "Theme.JAPKGEN", allowCleartextTraffic = true, permissions = "__PERMISSIONS__" } = {}) {
-  const cleartextLine = allowCleartextTraffic ? '        android:usesCleartextTraffic="true"' : "";
+function buildAndroidManifest({
+  themeName = "Theme.JAPKGEN",
+  allowCleartextTraffic = true,
+  permissions = "__PERMISSIONS__",
+} = {}) {
+  const cleartextLine = allowCleartextTraffic
+    ? '        android:usesCleartextTraffic="true"'
+    : "";
   return `<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 ${permissions}
     <application
@@ -210,7 +234,10 @@ function buildStringsXml(appName = "__APP_NAME__") {
 `;
 }
 
-function buildThemeXml(themeName = "Theme.JAPKGEN", parent = "Theme.AppCompat.DayNight.NoActionBar") {
+function buildThemeXml(
+  themeName = "Theme.JAPKGEN",
+  parent = "Theme.AppCompat.DayNight.NoActionBar"
+) {
   return `<resources>
     <style name="${themeName}" parent="${parent}" />
 </resources>
@@ -270,7 +297,6 @@ function buildAssetShell({ title, appName, subtitle }) {
 </html>
 `;
 }
-
 
 function buildTailwindConfig() {
   return `module.exports = {
@@ -442,33 +468,80 @@ function buildMaterialIconLink() {
   return `  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />\n`;
 }
 
-function buildVitePackageJson({ name, framework, dependencies, devDependencies }) {
-  return JSON.stringify(
-    {
-      name,
-      private: true,
-      type: "module",
-      scripts: {
-        dev: "vite",
-        build: "vite build",
-        preview: "vite preview"
+function buildVitePackageJson({
+  name,
+  framework,
+  dependencies,
+  devDependencies,
+}) {
+  return (
+    JSON.stringify(
+      {
+        name,
+        private: true,
+        type: "module",
+        scripts: {
+          dev: "vite",
+          build: "vite build",
+          preview: "vite preview",
+        },
+        dependencies,
+        devDependencies,
       },
-      dependencies,
-      devDependencies
-    },
-    null,
-    2
-  ) + "\n";
+      null,
+      2
+    ) + "\n"
+  );
 }
 
 function buildViteConfig({ framework, outDir = "../app/src/main/assets/www" }) {
   if (framework === "react") {
+    const runtimePlugins = parseList(
+      globalThis.__JAPKGEN_RUNTIME__?.options?.reactPlugins || []
+    );
+    const extraImports = runtimePlugins.length
+      ? `${runtimePlugins
+          .map((pkg, index) => `import plugin${index} from '${pkg}';`)
+          .join("\n")}\n`
+      : "";
+    const extraPluginEntries = runtimePlugins.length
+      ? `, ${runtimePlugins.map((_, index) => `plugin${index}()`).join(", ")}`
+      : "";
+
     return `import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+${extraImports}
+export default defineConfig({
+  base: './',
+  plugins: [react()${extraPluginEntries}],
+  build: {
+    outDir: '${outDir}',
+    emptyOutDir: true,
+  },
+});
+`;
+  }
+
+  if (framework === "solidjs") {
+    return `import { defineConfig } from 'vite';
+import solid from 'vite-plugin-solid';
 
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  plugins: [solid()],
+  build: {
+    outDir: '${outDir}',
+    emptyOutDir: true,
+  },
+});
+`;
+  }
+
+  if (framework === "vanilla" || framework === "bedbox") {
+    return `import { defineConfig } from 'vite';
+
+export default defineConfig({
+  base: './',
   build: {
     outDir: '${outDir}',
     emptyOutDir: true,
@@ -647,32 +720,38 @@ function baseCommonFiles({
   appBuildGradle = null,
   rootIncludeCompose = false,
   buildFeaturesBlock = "",
-  composeBlock = ""
+  composeBlock = "",
 }) {
   const allDependencies = uniq([...dependencies, ...appDependencies]);
 
   return {
     "settings.gradle": buildSettingsGradle(),
-    "build.gradle": rootBuildGradle || buildRootBuildGradle({ includeCompose: rootIncludeCompose }),
+    "build.gradle":
+      rootBuildGradle ||
+      buildRootBuildGradle({ includeCompose: rootIncludeCompose }),
     "gradle.properties": buildGradleProperties(),
-    "app/build.gradle": appBuildGradle || buildAppGradle({
-      dependencies: allDependencies,
-      appPlugins,
-      extraAndroidBlock,
-      buildFeaturesBlock,
-      composeBlock,
-      allowCleartextTraffic
+    "app/build.gradle":
+      appBuildGradle ||
+      buildAppGradle({
+        dependencies: allDependencies,
+        appPlugins,
+        extraAndroidBlock,
+        buildFeaturesBlock,
+        composeBlock,
+        allowCleartextTraffic,
+      }),
+    "app/src/main/AndroidManifest.xml": buildAndroidManifest({
+      themeName,
+      allowCleartextTraffic,
     }),
-    "app/src/main/AndroidManifest.xml": buildAndroidManifest({ themeName, allowCleartextTraffic }),
     "app/src/main/res/values/strings.xml": buildStringsXml(),
     "app/src/main/res/values/themes.xml": buildThemeXml(themeName),
     "app/src/main/res/layout/activity_main.xml": layoutXml,
     [sourcePath]: activitySource,
     "README.md": readme,
-    ...extraFiles
+    ...extraFiles,
   };
 }
-
 
 function webTemplate({
   title,
@@ -684,9 +763,14 @@ function webTemplate({
   packageJson,
   extraSourceFiles,
   mainSource,
-  appPlugins = []
+  appPlugins = [],
 }) {
-  const commonDeps = [ANDROIDX.appcompat, ANDROIDX.core, ANDROIDX.swipeRefresh, ANDROIDX.webkit];
+  const commonDeps = [
+    ANDROIDX.appcompat,
+    ANDROIDX.core,
+    ANDROIDX.swipeRefresh,
+    ANDROIDX.webkit,
+  ];
   const readme = frameworkReadme({
     appName,
     frameworkName: title,
@@ -696,7 +780,7 @@ function webTemplate({
       "Run `npm run build` from `frontend/` to emit the Vite bundle into `app/src/main/assets/www`.",
       "Open the Android project in Android Studio or build it with `japkgen build`.",
     ],
-    notes
+    notes,
   });
 
   return {
@@ -728,12 +812,14 @@ function webTemplate({
     </FrameLayout>
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 `,
-      activitySource: buildWebActivity({ homeUrl: "https://appassets.androidplatform.net/assets/www/index.html" }),
+      activitySource: buildWebActivity({
+        homeUrl: "https://appassets.androidplatform.net/assets/www/index.html",
+      }),
       extraFiles: {
         "app/src/main/assets/www/index.html": buildAssetShell({
           title: `${appName} • ${title}`,
           appName,
-          subtitle: summary
+          subtitle: summary,
         }),
         "frontend/package.json": packageJson,
         "frontend/vite.config.js": buildViteConfig({ framework }),
@@ -758,14 +844,14 @@ ${buildMaterialIconLink()}  <title>${appName}</title>
 </body>
 </html>
 `,
-        ...extraSourceFiles
+        ...extraSourceFiles,
       },
       readme,
       appPlugins,
       appBuildGradle: null,
       rootBuildGradle: buildRootBuildGradle(),
-      allowCleartextTraffic: true
-    })
+      allowCleartextTraffic: true,
+    }),
   };
 }
 
@@ -779,21 +865,22 @@ function reactTemplate() {
       "@mui/material": "^6.1.9",
       "@mui/icons-material": "^6.1.9",
       "@emotion/react": "^11.14.0",
-      "@emotion/styled": "^11.14.0"
+      "@emotion/styled": "^11.14.0",
     },
     devDependencies: {
       vite: "^6.0.0",
       "@vitejs/plugin-react": "^4.3.0",
       tailwindcss: "^3.4.14",
       postcss: "^8.4.49",
-      autoprefixer: "^10.4.20"
-    }
+      autoprefixer: "^10.4.20",
+    },
   });
 
   return webTemplate({
     title: "React",
     framework: "react",
-    summary: "A React starter packaged with Tailwind CSS, Material UI, XML-to-JSON previewing, and an Android WebView shell.",
+    summary:
+      "A React starter packaged with Tailwind CSS, Material UI, XML-to-JSON previewing, and an Android WebView shell.",
     notes: `- Tailwind CSS ships with PostCSS and a ready-to-use config
 - Google Fonts and Material Symbols are wired into the starter HTML
 - Material UI is included for the React starter
@@ -811,19 +898,24 @@ ReactDOM.createRoot(document.getElementById('app')).render(
   </React.StrictMode>
 );
 `,
-      "frontend/src/App.jsx": `import { useMemo } from 'react';
+      "frontend/src/App.jsx":
+        `import { useMemo } from 'react';
 import { Alert, Box, Button, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { prettyXmlJson } from './xml2json';
 
-const sampleXml = ` + "`" + `<profile id="7" enabled="true">
+const sampleXml = ` +
+        "`" +
+        `<profile id="7" enabled="true">
   <name>__APP_NAME__</name>
   <role>Web APK</role>
   <tags>
     <tag>Tailwind</tag>
     <tag>Material UI</tag>
   </tags>
-</profile>` + "`" + `;
+</profile>` +
+        "`" +
+        `;
 
 export default function App() {
   const jsonPreview = useMemo(() => prettyXmlJson(sampleXml), []);
@@ -880,8 +972,8 @@ export default function App() {
   );
 }
 `,
-      "frontend/src/styles.css": buildWebStyles()
-    }
+      "frontend/src/styles.css": buildWebStyles(),
+    },
   });
 }
 
@@ -890,18 +982,19 @@ function vueTemplate() {
     name: "__PACKAGE_PATH__-vue",
     framework: "vue",
     dependencies: {
-      vue: "^3.5.0"
+      vue: "^3.5.0",
     },
     devDependencies: {
       vite: "^6.0.0",
-      "@vitejs/plugin-vue": "^5.0.0"
-    }
+      "@vitejs/plugin-vue": "^5.0.0",
+    },
   });
 
   return webTemplate({
     title: "Vue",
     framework: "vue",
-    summary: "A Vue starter with Vite-powered asset output and a secure Android WebView container.",
+    summary:
+      "A Vue starter with Vite-powered asset output and a secure Android WebView container.",
     notes: `- Single-file components are included for a familiar Vue workflow
 - The Android shell reads the generated production bundle from app assets
 - Google Fonts CDN is configured in the starter HTML`,
@@ -965,8 +1058,8 @@ h1 {
   font-size: clamp(2.4rem, 6vw, 4rem);
 }
 p { margin: 0; line-height: 1.7; color: #cbd5e1; }
-`
-    }
+`,
+    },
   });
 }
 
@@ -975,18 +1068,19 @@ function preactTemplate() {
     name: "__PACKAGE_PATH__-preact",
     framework: "preact",
     dependencies: {
-      preact: "^10.25.0"
+      preact: "^10.25.0",
     },
     devDependencies: {
       vite: "^6.0.0",
-      "@preact/preset-vite": "^2.9.0"
-    }
+      "@preact/preset-vite": "^2.9.0",
+    },
   });
 
   return webTemplate({
     title: "Preact",
     framework: "preact",
-    summary: "A lightweight Preact starter that keeps the Vite workflow simple and fast.",
+    summary:
+      "A lightweight Preact starter that keeps the Vite workflow simple and fast.",
     notes: `- Small bundle surface for performance-sensitive mobile shells
 - Uses the same Vite output path as the other frontend templates
 - Google Fonts CDN is included in the HTML entry file`,
@@ -1050,43 +1144,45 @@ h1 {
   font-size: clamp(2.4rem, 6vw, 4rem);
 }
 p { margin: 0; line-height: 1.7; color: #cbd5e1; }
-`
-    }
+`,
+    },
   });
 }
 
 function angularTemplate() {
-  const packageJson = JSON.stringify(
-    {
-      name: "__PACKAGE_PATH__-angular",
-      private: true,
-      type: "module",
-      scripts: {
-        dev: "vite",
-        build: "vite build",
-        preview: "vite preview"
+  const packageJson =
+    JSON.stringify(
+      {
+        name: "__PACKAGE_PATH__-angular",
+        private: true,
+        type: "module",
+        scripts: {
+          dev: "vite",
+          build: "vite build",
+          preview: "vite preview",
+        },
+        dependencies: {
+          "@angular/core": "^20.0.0",
+          "@angular/common": "^20.0.0",
+          "@angular/platform-browser": "^20.0.0",
+          rxjs: "^7.8.0",
+          "zone.js": "^0.14.0",
+        },
+        devDependencies: {
+          vite: "^6.0.0",
+          typescript: "^5.8.0",
+          "@analogjs/vite-plugin-angular": "^2.0.0",
+        },
       },
-      dependencies: {
-        "@angular/core": "^20.0.0",
-        "@angular/common": "^20.0.0",
-        "@angular/platform-browser": "^20.0.0",
-        "rxjs": "^7.8.0",
-        "zone.js": "^0.14.0"
-      },
-      devDependencies: {
-        vite: "^6.0.0",
-        typescript: "^5.8.0",
-        "@analogjs/vite-plugin-angular": "^2.0.0"
-      }
-    },
-    null,
-    2
-  ) + "\n";
+      null,
+      2
+    ) + "\n";
 
   return webTemplate({
     title: "Angular",
     framework: "angular",
-    summary: "A streamlined Angular starter with Vite as the bundler and Android as the delivery shell.",
+    summary:
+      "A streamlined Angular starter with Vite as the bundler and Android as the delivery shell.",
     notes: `- Uses standalone Angular bootstrap files
 - The Vite output directory is wired directly into Android assets
 - Google Fonts CDN is included in the entry HTML`,
@@ -1173,29 +1269,30 @@ p { margin: 0; line-height: 1.7; color: #cbd5e1; }
 </body>
 </html>
 `,
-      "frontend/tsconfig.json": JSON.stringify(
-        {
-          compilerOptions: {
-            target: "ES2022",
-            module: "ESNext",
-            moduleResolution: "Bundler",
-            strict: true,
-            lib: ["ES2022", "DOM"],
-            skipLibCheck: true,
-            noEmit: true,
-            baseUrl: ".",
-            paths: {}
+      "frontend/tsconfig.json":
+        JSON.stringify(
+          {
+            compilerOptions: {
+              target: "ES2022",
+              module: "ESNext",
+              moduleResolution: "Bundler",
+              strict: true,
+              lib: ["ES2022", "DOM"],
+              skipLibCheck: true,
+              noEmit: true,
+              baseUrl: ".",
+              paths: {},
+            },
+            include: ["src/**/*.ts"],
+            angularCompilerOptions: {
+              strictTemplates: true,
+            },
           },
-          include: ["src/**/*.ts"],
-          angularCompilerOptions: {
-            strictTemplates: true
-          }
-        },
-        null,
-        2
-      ) + "\n",
-      "frontend/vite.config.ts": buildViteConfig({ framework: "angular" })
-    }
+          null,
+          2
+        ) + "\n",
+      "frontend/vite.config.ts": buildViteConfig({ framework: "angular" }),
+    },
   });
 }
 
@@ -1204,10 +1301,11 @@ function nativeTemplate() {
   const readme = makeReadme({
     appName: "__APP_NAME__",
     templateTitle: "Native",
-    templateSummary: "A minimal Android application scaffold for standard native UI development.",
+    templateSummary:
+      "A minimal Android application scaffold for standard native UI development.",
     templateNotes: `- Clean starter template
 - Straightforward screen hierarchy
-- Lightweight dependency surface`
+- Lightweight dependency surface`,
   });
 
   return {
@@ -1243,8 +1341,8 @@ public class MainActivity extends AppCompatActivity {
 }
 `,
       readme,
-      allowCleartextTraffic: false
-    })
+      allowCleartextTraffic: false,
+    }),
   };
 }
 
@@ -1253,10 +1351,11 @@ function kotlinTemplate() {
   const readme = makeReadme({
     appName: "__APP_NAME__",
     templateTitle: "Kotlin",
-    templateSummary: "A modern Android starter template written in Kotlin with a concise AppCompat activity.",
+    templateSummary:
+      "A modern Android starter template written in Kotlin with a concise AppCompat activity.",
     templateNotes: `- Kotlin source file included
 - Uses the AndroidX Kotlin extensions package
-- Suitable as a compact app starting point`
+- Suitable as a compact app starting point`,
   });
 
   return {
@@ -1292,11 +1391,13 @@ class MainActivity : AppCompatActivity() {
 `,
       sourcePath: "app/src/main/kotlin/__PACKAGE_PATH__/MainActivity.kt",
       appPlugins: ["id 'org.jetbrains.kotlin.android'"],
-      appDependencies: ["org.jetbrains.kotlin:kotlin-stdlib:__KOTLIN_VERSION__"],
+      appDependencies: [
+        "org.jetbrains.kotlin:kotlin-stdlib:__KOTLIN_VERSION__",
+      ],
       readme,
       allowCleartextTraffic: false,
-      rootBuildGradle: buildRootBuildGradle({ includeCompose: false })
-    })
+      rootBuildGradle: buildRootBuildGradle({ includeCompose: false }),
+    }),
   };
 }
 
@@ -1304,16 +1405,17 @@ function composeTemplate() {
   const dependencies = [
     ANDROIDX.activityCompose,
     ANDROIDX.appcompat,
-    ANDROIDX.coreKtx
+    ANDROIDX.coreKtx,
   ];
 
   const readme = makeReadme({
     appName: "__APP_NAME__",
     templateTitle: "Jetpack Compose",
-    templateSummary: "A Jetpack Compose starter for modern Android UI development with a minimal Kotlin entry point.",
+    templateSummary:
+      "A Jetpack Compose starter for modern Android UI development with a minimal Kotlin entry point.",
     templateNotes: `- Compose is enabled in the Gradle build
 - Material 3 is included for a modern default surface
-- The project keeps the Android shell intentionally small`
+- The project keeps the Android shell intentionally small`,
   });
 
   const appBuildGradle = `import java.util.Properties
@@ -1447,9 +1549,9 @@ private fun ComposeApp() {
       rootBuildGradle: buildRootBuildGradle({ includeCompose: true }),
       appBuildGradle,
       extraFiles: {
-        "app/src/main/res/values/themes.xml": buildComposeThemeXml()
-      }
-    })
+        "app/src/main/res/values/themes.xml": buildComposeThemeXml(),
+      },
+    }),
   };
 }
 
@@ -1458,10 +1560,11 @@ function gameJavaTemplate() {
   const readme = makeReadme({
     appName: "__APP_NAME__",
     templateTitle: "Game (Java)",
-    templateSummary: "A SurfaceView-based Java game starter with a lightweight update and render loop.",
+    templateSummary:
+      "A SurfaceView-based Java game starter with a lightweight update and render loop.",
     templateNotes: `- Self-contained game loop
 - Keeps the screen awake while running
-- Suitable for quick gameplay prototypes`
+- Suitable for quick gameplay prototypes`,
   });
 
   return {
@@ -1612,11 +1715,11 @@ public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Cal
         }
     }
 }
-`
+`,
       },
       readme,
-      allowCleartextTraffic: false
-    })
+      allowCleartextTraffic: false,
+    }),
   };
 }
 
@@ -1631,7 +1734,7 @@ function gameCppTemplate() {
     templateNotes: `- C++17 baseline with guarded JNI entry points
 - Fixed-timestep game loop for stable updates
 - ASCII renderer included for quick validation
-- Clean structure for future OpenGL ES or SDL integration`
+- Clean structure for future OpenGL ES or SDL integration`,
   });
 
   return {
@@ -2220,14 +2323,13 @@ Java___PACKAGE_JNI___MainActivity_nativeGetScore(JNIEnv*, jobject) {
         return 0;
     }
 }
-`
+`,
       },
       readme,
-      allowCleartextTraffic: false
-    })
+      allowCleartextTraffic: false,
+    }),
   };
 }
-
 
 function nativeCCommonReadme(title, summary, notes) {
   return makeReadme({
@@ -2238,8 +2340,8 @@ function nativeCCommonReadme(title, summary, notes) {
     setupNotes: [
       "The Android shell loads a small native library through JNI.",
       "CMake and Make scaffolding are included for local experimentation.",
-      "The starter is intentionally small so you can swap in your own native code fast."
-    ]
+      "The starter is intentionally small so you can swap in your own native code fast.",
+    ],
   });
 }
 
@@ -2277,6 +2379,328 @@ public class MainActivity extends AppCompatActivity {
 }
 `;
 }
+
+
+function toyboxTemplate() {
+  const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
+  const readme = buildToolboxReadme({
+    title: 'ToyBox',
+    summary:
+      'A Java APK utility starter with a simple dashboard, quick-action layout, and a clean native Android shell.',
+    bullets: [
+      'Java-based Android entry point',
+      'Ready-made utility dashboard layout',
+      'Good fit for APK helpers, inspectors, and small tools',
+    ],
+  });
+
+  return {
+    dependencies,
+    files: baseCommonFiles({
+      dependencies,
+      layoutXml: `<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ToyBox"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:text="Java APK Utility starter for quick tasks and build helpers."
+        android:textSize="16sp" />
+</LinearLayout>
+`,
+      activitySource: `package __PACKAGE__;
+
+import android.os.Bundle;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        TextView view = new TextView(this);
+        view.setPadding(48, 48, 48, 48);
+        view.setTextSize(20f);
+        view.setText("ToyBox is ready for your APK utility workflow.");
+        setContentView(view);
+    }
+}
+`,
+      readme,
+      allowCleartextTraffic: false,
+      extraFiles: {
+        'tools/README.md': '# ToyBox utilities\n\nThis starter is a place to wire custom Java-side APK helpers and build shortcuts.\n',
+      },
+    }),
+  };
+}
+
+function nextboxTemplate() {
+  const dependencies = [ANDROIDX.appcompat, ANDROIDX.coreKtx];
+  const readme = buildToolboxReadme({
+    title: 'NextBox',
+    summary:
+      'A Kotlin APK utility starter designed for smaller helpers, quick tooling screens, and modern Android code.',
+    bullets: [
+      'Kotlin entry point',
+      'Lean AppCompat shell',
+      'Easy base for APK helper screens',
+    ],
+  });
+
+  return {
+    dependencies,
+    files: baseCommonFiles({
+      dependencies,
+      layoutXml: `<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="NextBox"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:text="Kotlin APK Utility starter for the next round of helpers."
+        android:textSize="16sp" />
+</LinearLayout>
+`,
+      activitySource: `package __PACKAGE__
+
+import android.os.Bundle
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+
+class MainActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val view = TextView(this)
+        view.setPadding(48, 48, 48, 48)
+        view.textSize = 20f
+        view.text = "NextBox is ready for your Kotlin utility workflow."
+        setContentView(view)
+    }
+}
+`,
+      sourcePath: 'app/src/main/kotlin/__PACKAGE_PATH__/MainActivity.kt',
+      appPlugins: ["id 'org.jetbrains.kotlin.android'"],
+      appDependencies: ['org.jetbrains.kotlin:kotlin-stdlib:__KOTLIN_VERSION__'],
+      readme,
+      allowCleartextTraffic: false,
+      rootBuildGradle: buildRootBuildGradle({ includeCompose: false }),
+    }),
+  };
+}
+
+function bedboxTemplate() {
+  const dependencies = [ANDROIDX.appcompat, ANDROIDX.core, ANDROIDX.swipeRefresh, ANDROIDX.webkit];
+  const readme = frameworkReadme({
+    appName: '__APP_NAME__',
+    frameworkName: 'BedBox',
+    summary: 'A Web APK utility starter with a tiny frontend workspace, media conversion helpers, and a secure WebView shell.',
+    setupSteps: [
+      'Install the frontend dependencies in the `frontend/` directory.',
+      'Use `frontend/tools/convert-assets.mjs` to convert images, audio, and fonts when you need a packaging pass.',
+      'Run the Android build after the web bundle has been copied into the asset shell.',
+    ],
+    notes: '- Web utility starter for asset-heavy projects\n- Includes FFmpeg-based image/audio conversion scaffolding\n- Includes ftCLI-based font conversion scaffolding',
+  });
+
+  const frontendPackage = JSON.stringify({
+    name: '__PACKAGE_PATH__-bedbox',
+    private: true,
+    type: 'module',
+    scripts: {
+      dev: 'vite',
+      build: 'vite build',
+      preview: 'vite preview',
+      'convert:assets': 'node tools/convert-assets.mjs',
+    },
+    dependencies: {},
+    devDependencies: {
+      vite: '^6.0.0',
+    },
+  }, null, 2) + '\n';
+
+  return {
+    dependencies,
+    files: baseCommonFiles({
+      dependencies,
+      layoutXml: `<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/swipeRefresh"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <WebView
+            android:id="@+id/webview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <ProgressBar
+            android:id="@+id/progress"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:indeterminate="true"
+            android:visibility="gone" />
+    </FrameLayout>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+`,
+      activitySource: buildWebActivity({
+        homeUrl: 'https://appassets.androidplatform.net/assets/www/index.html',
+      }),
+      extraFiles: {
+        'app/src/main/assets/www/index.html': buildAssetShell({
+          title: '__APP_NAME__ • BedBox',
+          appName: '__APP_NAME__',
+          subtitle: 'A Web APK utility shell for helper dashboards and asset conversion workflows.',
+        }),
+        'frontend/package.json': frontendPackage,
+        'frontend/vite.config.js': buildViteConfig({ framework: 'vanilla' }),
+        'frontend/index.html': `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>__APP_NAME__</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
+`,
+        'frontend/src/main.js': `import './styles.css';
+
+document.querySelector('#app').innerHTML = ` + "`" + `
+  <main class="shell">
+    <section class="card">
+      <span class="badge">BedBox</span>
+      <h1>__APP_NAME__</h1>
+      <p>Web APK utility shell with media conversion helpers and a clean production asset path.</p>
+      <ul>
+        <li>Images → WebP via FFmpeg</li>
+        <li>Audio → FLAC via FFmpeg</li>
+        <li>Fonts → WOFF via ftCLI</li>
+      </ul>
+    </section>
+  </main>
+` + "`" + `;
+`,
+        'frontend/src/styles.css': `body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #020617;
+  color: #e2e8f0;
+}
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.card {
+  width: min(680px, 100%);
+  border-radius: 28px;
+  padding: 32px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+.badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.18);
+}
+`,
+        ...buildMediaToolingFiles(),
+      },
+      readme,
+      appPlugins: [],
+      appBuildGradle: null,
+      rootBuildGradle: buildRootBuildGradle(),
+      allowCleartextTraffic: true,
+    }),
+  };
+}
+
+function solidjsTemplate() {
+  const packageJson = buildVitePackageJson({
+    name: '__PACKAGE_PATH__-solidjs',
+    framework: 'solidjs',
+    dependencies: {
+      'solid-js': '^1.9.0',
+    },
+    devDependencies: {
+      vite: '^6.0.0',
+      'vite-plugin-solid': '^2.11.0',
+    },
+  });
+
+  const readme = frameworkReadme({
+    appName: '__APP_NAME__',
+    frameworkName: 'SolidJS',
+    summary: 'A SolidJS starter shipped through the Android WebView shell with a lightweight Vite setup.',
+    setupSteps: [
+      'Install dependencies inside `frontend/`.',
+      'Run the Vite build to emit assets into the Android shell.',
+      'Use the media conversion helpers whenever your app ships new images, audio, or fonts.',
+    ],
+    notes: '- SolidJS starter for fast UI workflows\n- Includes FFmpeg and ftCLI conversion helpers\n- Works with the same APK shell pipeline',
+  });
+
+  return webTemplate({
+    title: 'SolidJS',
+    framework: 'solidjs',
+    summary: 'A SolidJS starter with WebView packaging, conversion helpers, and a streamlined Vite path.',
+    notes: '- SolidJS integration is ready\n- Media conversion helpers are included\n- Fits the same WebView packaging flow as the other frontend templates',
+    packageJson,
+    extraSourceFiles: {
+      'frontend/src/main.jsx': `import { render } from 'solid-js/web';
+import App from './App';
+import './styles.css';
+
+render(() => <App />, document.getElementById('app'));
+`,
+      'frontend/src/App.jsx': buildSolidApp({ appName: '__APP_NAME__' }),
+      'frontend/src/xml2json.js': buildXml2JsonHelper(),
+      'frontend/src/styles.css': buildWebStyles(),
+      ...buildMediaToolingFiles(),
+      'frontend/package.json': packageJson,
+    },
+  });
+}
+
 
 function cTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
@@ -2364,7 +2788,7 @@ Java___PACKAGE_JNI___MainActivity_nativeBanner(JNIEnv *env, jobject thiz) {
     return (*env)->NewStringUTF(env, message);
 }
 `,
-        "Makefile": `APP_NAME ?= japkgen-native-c
+        Makefile: `APP_NAME ?= japkgen-native-c
 BUILD_DIR ?= build
 CC ?= cc
 CFLAGS ?= -O2 -Wall -Wextra -pedantic
@@ -2393,11 +2817,11 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 .PHONY: all help demo clean
-`
+`,
       },
       readme,
-      allowCleartextTraffic: false
-    })
+      allowCleartextTraffic: false,
+    }),
   };
 }
 
@@ -2491,7 +2915,7 @@ Java___PACKAGE_JNI___MainActivity_nativeBanner(JNIEnv *env, jobject thiz) {
     return env->NewStringUTF(message.c_str());
 }
 `,
-        "Makefile": `APP_NAME ?= japkgen-native-cpp
+        Makefile: `APP_NAME ?= japkgen-native-cpp
 BUILD_DIR ?= build
 CXX ?= c++
 CXXFLAGS ?= -O2 -Wall -Wextra -pedantic -std=c++17
@@ -2520,25 +2944,182 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 .PHONY: all help demo clean
-`
+`,
       },
       readme,
-      allowCleartextTraffic: false
-    })
+      allowCleartextTraffic: false,
+    }),
   };
 }
 
+
+function runtimeOptions() {
+  return globalThis.__JAPKGEN_RUNTIME__?.options || {};
+}
+
+function listOption(value) {
+  return parseList(Array.isArray(value) ? value : String(value || ""));
+}
+
+
+function buildUtilityConversionScript({ framework = "web" } = {}) {
+  return `#!/usr/bin/env node
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import process from 'node:process';
+import { spawn } from 'node:child_process';
+
+const ROOT = process.cwd();
+const INPUT_DIR = path.join(ROOT, 'assets');
+const OUTPUT_DIR = path.join(ROOT, 'converted');
+const FFMPEG = process.env.FFMPEG_BIN || 'ffmpeg';
+const FTCLI = process.env.FTCLI_BIN || 'ftcli';
+
+function run(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: 'inherit', shell: process.platform === 'win32' });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error('Command failed: ' + command + ' ' + args.join(' ')));
+    });
+  });
+}
+
+async function walk(dir, out = []) {
+  let entries = [];
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await walk(abs, out);
+    } else {
+      out.push(abs);
+    }
+  }
+  return out;
+}
+
+function ext(name) {
+  return path.extname(name).toLowerCase();
+}
+
+async function convertImage(file) {
+  const rel = path.relative(INPUT_DIR, file);
+  const output = path.join(OUTPUT_DIR, rel).replace(/\.[^.]+$/, '.webp');
+  await fs.mkdir(path.dirname(output), { recursive: true });
+  await run(FFMPEG, ['-y', '-i', file, '-c:v', 'libwebp', '-q:v', '82', output]);
+}
+
+async function convertAudio(file) {
+  const rel = path.relative(INPUT_DIR, file);
+  const output = path.join(OUTPUT_DIR, rel).replace(/\.[^.]+$/, '.flac');
+  await fs.mkdir(path.dirname(output), { recursive: true });
+  await run(FFMPEG, ['-y', '-i', file, '-vn', '-c:a', 'flac', output]);
+}
+
+async function convertFont(file) {
+  const rel = path.relative(INPUT_DIR, file);
+  const output = path.join(OUTPUT_DIR, rel).replace(/\.[^.]+$/, '.woff');
+  await fs.mkdir(path.dirname(output), { recursive: true });
+  // Adjust the CLI invocation below if your ftCLI version uses a different command layout.
+  await run(FTCLI, ['converter', 'woff', file, output]);
+}
+
+const files = await walk(INPUT_DIR);
+await fs.mkdir(OUTPUT_DIR, { recursive: true });
+
+for (const file of files) {
+  const e = ext(file);
+  if (['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.avif', '.heic', '.webp'].includes(e)) {
+    await convertImage(file);
+    continue;
+  }
+  if (['.mp3', '.wav', '.aac', '.m4a', '.ogg', '.opus', '.wma'].includes(e)) {
+    await convertAudio(file);
+    continue;
+  }
+  if (['.ttf', '.otf', '.woff', '.woff2'].includes(e)) {
+    await convertFont(file);
+  }
+}
+
+console.log('Conversion finished for ${framework}.');
+`;
+}
+
+function buildToolboxReadme({ title, summary, bullets }) {
+  return `# ${title}
+
+${summary}
+
+## Included
+
+${bullets.map((item) => `- ${item}`).join('\n')}
+`;
+}
+
+function buildSolidApp({ appName }) {
+  return `import { createMemo } from 'solid-js';
+import { prettyXmlJson } from './xml2json';
+
+const sampleXml = ` + "`" + `<item id="12"><name>${appName}</name><status>ready</status></item>` + "`" + `;
+
+export default function App() {
+  const preview = createMemo(() => prettyXmlJson(sampleXml));
+
+  return (
+    <main class="shell">
+      <section class="card">
+        <span class="badge">SolidJS</span>
+        <h1>${appName}</h1>
+        <p>A light and fast WebView-ready SolidJS starter with the same APK workflow.</p>
+        <pre>{preview()}</pre>
+      </section>
+    </main>
+  );
+}
+`;
+}
+
+function buildMediaToolingFiles() {
+  return {
+    'frontend/tools/convert-assets.mjs': buildUtilityConversionScript({ framework: 'web' }),
+    'tools/README.md': `# Asset conversion\n\nRun \`node tools/convert-assets.mjs\` after placing source media inside \`assets/\`.\n`,
+  };
+}
+
+function buildReactPluginFile() {
+  const plugins = listOption(runtimeOptions().reactPlugins);
+  if (!plugins.length) {
+    return `export const reactPlugins = [];\n`;
+  }
+
+  const imports = plugins.map((pkg, index) => `import plugin${index} from '${pkg}';`).join('\n');
+  const entries = plugins.map((_, index) => `plugin${index}()`).join(', ');
+  return `${imports}\n\nexport const reactPlugins = [${entries}];\n`;
+}
 const BUILTIN_TEMPLATES = {
   webview: () => {
-    const dependencies = [ANDROIDX.appcompat, ANDROIDX.core, ANDROIDX.swipeRefresh, ANDROIDX.webkit];
+    const dependencies = [
+      ANDROIDX.appcompat,
+      ANDROIDX.core,
+      ANDROIDX.swipeRefresh,
+      ANDROIDX.webkit,
+    ];
     const readme = makeReadme({
       appName: "__APP_NAME__",
       templateTitle: "WebView",
-      templateSummary: "A WebView-based Android application scaffold with pull-to-refresh and external link handling.",
+      templateSummary:
+        "A WebView-based Android application scaffold with pull-to-refresh and external link handling.",
       templateNotes: `- JavaScript support enabled
 - DOM storage support enabled
 - Pull-to-refresh support included
-- External links open in the browser`
+- External links open in the browser`,
     });
 
     return {
@@ -2571,19 +3152,25 @@ const BUILTIN_TEMPLATES = {
 </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 `,
         activitySource: buildWebActivity({ homeUrl: "https://example.com" }),
-        readme
-      })
+        readme,
+      }),
     };
   },
   pwa: () => {
-    const dependencies = [ANDROIDX.appcompat, ANDROIDX.core, ANDROIDX.swipeRefresh, ANDROIDX.webkit];
+    const dependencies = [
+      ANDROIDX.appcompat,
+      ANDROIDX.core,
+      ANDROIDX.swipeRefresh,
+      ANDROIDX.webkit,
+    ];
     const readme = makeReadme({
       appName: "__APP_NAME__",
       templateTitle: "PWA",
-      templateSummary: "A local asset-backed Progressive Web App shell powered by AndroidX WebKit and WebViewAssetLoader.",
+      templateSummary:
+        "A local asset-backed Progressive Web App shell powered by AndroidX WebKit and WebViewAssetLoader.",
       templateNotes: `- Local asset shell
 - Offline fallback page
-- Good for hybrid web applications`
+- Good for hybrid web applications`,
     });
 
     return {
@@ -2709,7 +3296,8 @@ public class MainActivity extends AppCompatActivity {
           "app/src/main/assets/www/index.html": buildAssetShell({
             title: "__APP_NAME__ PWA",
             appName: "__APP_NAME__",
-            subtitle: "This local shell is ready for offline usage and production asset hosting."
+            subtitle:
+              "This local shell is ready for offline usage and production asset hosting.",
           }),
           "app/src/main/assets/www/offline.html": `<!doctype html>
 <html lang="en">
@@ -2728,32 +3316,37 @@ public class MainActivity extends AppCompatActivity {
   "background_color": "#0f172a",
   "theme_color": "#2563eb"
 }
-`
+`,
         },
-        readme
-      })
+        readme,
+      }),
     };
   },
+  bedbox: bedboxTemplate,
   react: reactTemplate,
+  solidjs: solidjsTemplate,
   vue: vueTemplate,
   angular: angularTemplate,
   preact: preactTemplate,
   native: nativeTemplate,
+  toybox: toyboxTemplate,
   compose: composeTemplate,
   kotlin: kotlinTemplate,
+  nextbox: nextboxTemplate,
   c: cTemplate,
   cpp: cppTemplate,
   cmake: cppTemplate,
   make: cTemplate,
   "game-java": gameJavaTemplate,
-  "game-cpp": gameCppTemplate
+  "game-cpp": gameCppTemplate,
 };
 
 export function getTemplate(templateName, registry = BUILTIN_TEMPLATES) {
   const key = String(templateName).toLowerCase();
   const templateFactory = registry[key];
   if (!templateFactory) return null;
-  const template = typeof templateFactory === "function" ? templateFactory() : templateFactory;
+  const template =
+    typeof templateFactory === "function" ? templateFactory() : templateFactory;
   return template || null;
 }
 

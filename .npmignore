@@ -3,6 +3,8 @@ node_modules/
 .github/
 .gitignore
 tmp/
-webpage/
+web/
 **/*.log
 examples/
+.prettierignore
+.prettierrc

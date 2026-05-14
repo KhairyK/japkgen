@@ -17,12 +17,17 @@ export function toPackagePath(pkg = "") {
 }
 
 export function toJniPackage(pkg = "") {
-  return normalizePathValue(String(pkg).trim().replaceAll(".", "/")).replaceAll("/", "_");
+  return normalizePathValue(String(pkg).trim().replaceAll(".", "/")).replaceAll(
+    "/",
+    "_"
+  );
 }
 
 export function applyTemplate(content, vars) {
   return String(content).replace(/__([A-Z0-9_]+)__/g, (match, key) => {
-    return Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : match;
+    return Object.prototype.hasOwnProperty.call(vars, key)
+      ? String(vars[key])
+      : match;
   });
 }
 
@@ -78,10 +83,27 @@ export async function fileExists(filePath) {
 }
 
 export async function templateExists(projectDir) {
-  const gradlew = process.platform === "win32" ? path.join(projectDir, "gradlew.bat") : path.join(projectDir, "gradlew");
-  const wrapperJar = path.join(projectDir, "gradle", "wrapper", "gradle-wrapper.jar");
-  const wrapperProps = path.join(projectDir, "gradle", "wrapper", "gradle-wrapper.properties");
-  return (await fileExists(gradlew)) && (await fileExists(wrapperJar)) && (await fileExists(wrapperProps));
+  const gradlew =
+    process.platform === "win32"
+      ? path.join(projectDir, "gradlew.bat")
+      : path.join(projectDir, "gradlew");
+  const wrapperJar = path.join(
+    projectDir,
+    "gradle",
+    "wrapper",
+    "gradle-wrapper.jar"
+  );
+  const wrapperProps = path.join(
+    projectDir,
+    "gradle",
+    "wrapper",
+    "gradle-wrapper.properties"
+  );
+  return (
+    (await fileExists(gradlew)) &&
+    (await fileExists(wrapperJar)) &&
+    (await fileExists(wrapperProps))
+  );
 }
 
 export function getDefaultAndroidSdkPaths() {
@@ -90,7 +112,13 @@ export function getDefaultAndroidSdkPaths() {
   if (process.platform === "win32") {
     return [
       path.join(process.env.LOCALAPPDATA || "", "Android", "Sdk"),
-      path.join(process.env.USERPROFILE || home, "AppData", "Local", "Android", "Sdk")
+      path.join(
+        process.env.USERPROFILE || home,
+        "AppData",
+        "Local",
+        "Android",
+        "Sdk"
+      ),
     ].filter(Boolean);
   }
 
@@ -145,7 +173,7 @@ function spawnAsync(command, args = [], options = {}) {
     cwd = process.cwd(),
     env = process.env,
     shell = false,
-    stdio = "pipe"
+    stdio = "pipe",
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -154,7 +182,7 @@ function spawnAsync(command, args = [], options = {}) {
       env,
       shell,
       windowsHide: true,
-      stdio: stdio === "inherit" ? "inherit" : ["ignore", "pipe", "pipe"]
+      stdio: stdio === "inherit" ? "inherit" : ["ignore", "pipe", "pipe"],
     });
 
     let stdout = "";
@@ -177,12 +205,17 @@ function spawnAsync(command, args = [], options = {}) {
         ok: false,
         stdout,
         stderr: stderr || error.message,
-        code: error.code ?? 1
+        code: error.code ?? 1,
       };
       if (options.reject === false) {
         resolve(result);
       } else {
-        reject(Object.assign(new Error(result.stderr || result.stdout || error.message), result));
+        reject(
+          Object.assign(
+            new Error(result.stderr || result.stdout || error.message),
+            result
+          )
+        );
       }
     });
 
@@ -191,7 +224,7 @@ function spawnAsync(command, args = [], options = {}) {
         ok: code === 0,
         stdout,
         stderr,
-        code: code ?? 0
+        code: code ?? 0,
       };
 
       if (result.ok || options.reject === false) {
@@ -199,7 +232,14 @@ function spawnAsync(command, args = [], options = {}) {
         return;
       }
 
-      reject(Object.assign(new Error(result.stderr || result.stdout || `Command failed: ${command}`), result));
+      reject(
+        Object.assign(
+          new Error(
+            result.stderr || result.stdout || `Command failed: ${command}`
+          ),
+          result
+        )
+      );
     });
   });
 }
@@ -220,17 +260,29 @@ async function pythonZipList(filePath) {
     "for info in zf.infolist():",
     "    if info.is_dir():",
     "        continue",
-    "    print(f'{info.file_size}\t{info.filename}')"
+    "    print(f'{info.file_size}\t{info.filename}')",
   ].join("; ");
-  const result = await runCommand("python3", ["-c", script, filePath], { reject: false });
+  const result = await runCommand("python3", ["-c", script, filePath], {
+    reject: false,
+  });
   if (result.ok && result.stdout.trim()) return result.stdout;
-  const result2 = await runCommand("python", ["-c", script, filePath], { reject: false });
+  const result2 = await runCommand("python", ["-c", script, filePath], {
+    reject: false,
+  });
   if (result2.ok) return result2.stdout;
-  throw new Error(result.stderr || result.stdout || result2.stderr || result2.stdout || `Failed to read zip: ${filePath}`);
+  throw new Error(
+    result.stderr ||
+      result.stdout ||
+      result2.stderr ||
+      result2.stdout ||
+      `Failed to read zip: ${filePath}`
+  );
 }
 
 export async function listZipEntriesWithUnzip(filePath) {
-  const unzipResult = await runCommand("unzip", ["-l", filePath], { reject: false });
+  const unzipResult = await runCommand("unzip", ["-l", filePath], {
+    reject: false,
+  });
   if (unzipResult.ok) {
     return unzipResult.stdout;
   }
@@ -250,7 +302,8 @@ export function humanBytes(bytes = 0) {
 
 export function pickFirstDefined(...values) {
   for (const value of values) {
-    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+    if (value !== undefined && value !== null && String(value).trim() !== "")
+      return value;
   }
   return undefined;
 }
@@ -280,5 +333,7 @@ export async function readJson(filePath, fallback = null) {
 }
 
 export function safeFileName(input = "") {
-  return String(input).trim().replace(/[<>:"/\\|?*\x00-\x1F]/g, "_");
+  return String(input)
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_");
 }

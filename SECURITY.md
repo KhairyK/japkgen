@@ -5,11 +5,11 @@
 The following table outlines which versions of this project are currently receiving security updates and maintenance support.
 
 | Version | Supported |
-| ------- | ---------- |
-| 2.0.0   |     ☑️      |
-| 1.2.0   |     ☑️      |
-| 1.1.0   |     ⚠️      |
-| 1.0.0   |     ✖️      |
+| ------- | --------- |
+| 2.0.0   | ☑️        |
+| 1.2.0   | ☑️        |
+| 1.1.0   | ⚠️        |
+| 1.0.0   | ✖️        |
 
 Versions that are no longer supported will not receive security patches, vulnerability fixes, or maintenance updates. Users are strongly encouraged to upgrade to a supported version.
 
@@ -66,10 +66,10 @@ After receiving a report, our security team will:
 
 ### Expected Timeline
 
-| Stage | Estimated Time |
-| ------ | -------------- |
-| Initial Response | Within 48 hours |
-| Validation & Assessment | Within 7 business days |
+| Stage                       | Estimated Time                   |
+| --------------------------- | -------------------------------- |
+| Initial Response            | Within 48 hours                  |
+| Validation & Assessment     | Within 7 business days           |
 | Remediation & Patch Release | Based on severity and complexity |
 
 Please note that complex vulnerabilities may require additional investigation time.

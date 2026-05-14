@@ -14,6 +14,7 @@ import { serveProject } from "./serve.js";
 import { createKeystore, sanitizeAlias } from "./signing.js";
 import { runProjectTests } from "./test.js";
 import { analyzeApk } from "./analyze.js";
+import { runDependencyManager } from "./dependency-manager.js";
 import { normalizeBoolean } from "./utils.js";
 
 const VERSION = "2.0.0";
@@ -34,6 +35,7 @@ ${pc.bold(pc.yellow("Usage:"))}
   ${pc.cyan("japkgen")} ${pc.green("keystore")} create [options]
   ${pc.cyan("japkgen")} ${pc.green("test")} [projectDir]
   ${pc.cyan("japkgen")} ${pc.green("analyze")} <file.apk>
+  ${pc.cyan("japkgen")} ${pc.green("deps")} [list|add|remove] [projectDir]
 
 ${pc.bold(pc.yellow("Commands:"))}
   ${pc.green("new")}         ${pc.dim("Generate a new Android project")}
@@ -43,6 +45,7 @@ ${pc.bold(pc.yellow("Commands:"))}
   ${pc.green("keystore")}    ${pc.dim("Create a release keystore")}
   ${pc.green("test")}        ${pc.dim("Validate generated project structure")}
   ${pc.green("analyze")}     ${pc.dim("Inspect APK contents")}
+  ${pc.green("deps")}        ${pc.dim("Manage app/build.gradle dependencies")}
 
 ${pc.bold(pc.yellow("Templates:"))}
   ${TEMPLATES.map((t) => pc.magenta(t)).join("\n  ")}
@@ -65,6 +68,7 @@ ${pc.bold(pc.yellow("Options:"))}
   ${pc.cyan("--url")} <url>
   ${pc.cyan("--permissions")} <list>
   ${pc.cyan("--icon")} <path>
+  ${pc.cyan("--react-plugins")} <list>
   ${pc.cyan("--signing")}
   ${pc.cyan("--keystore")} <path>
   ${pc.cyan("--key-alias")} <alias>
@@ -97,7 +101,8 @@ function parseFlags(argv) {
 
     const name = key.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
     const value =
-      inlineValue ?? (i + 1 < argv.length && !argv[i + 1].startsWith("-") ? argv[++i] : true);
+      inlineValue ??
+      (i + 1 < argv.length && !argv[i + 1].startsWith("-") ? argv[++i] : true);
 
     options[name] = value;
   }
@@ -115,19 +120,22 @@ async function ask(question, defaultValue = "") {
     return toStringValue(defaultValue);
   }
 
-  const hasDefault = defaultValue !== undefined && defaultValue !== null && String(defaultValue).length > 0;
+  const hasDefault =
+    defaultValue !== undefined &&
+    defaultValue !== null &&
+    String(defaultValue).length > 0;
 
   const response = await prompts(
     {
       type: "text",
       name: "value",
       message: question,
-      initial: hasDefault ? String(defaultValue) : undefined
+      initial: hasDefault ? String(defaultValue) : undefined,
     },
     {
       onCancel: () => {
         throw new Error("Prompt cancelled by user.");
-      }
+      },
     }
   );
 
@@ -148,18 +156,21 @@ async function askRequired(question, defaultValue = "") {
         type: "text",
         name: "value",
         message: question,
-        initial: defaultValue !== undefined && defaultValue !== null && String(defaultValue).length > 0
-          ? String(defaultValue)
-          : undefined,
+        initial:
+          defaultValue !== undefined &&
+          defaultValue !== null &&
+          String(defaultValue).length > 0
+            ? String(defaultValue)
+            : undefined,
         validate: (value) => {
           const text = String(value ?? "").trim();
           return text.length > 0 ? true : "A value is required.";
-        }
+        },
       },
       {
         onCancel: () => {
           throw new Error("Prompt cancelled by user.");
-        }
+        },
       }
     );
 
@@ -178,12 +189,12 @@ async function askYesNo(question, defaultValue = false) {
       type: "confirm",
       name: "value",
       message: question,
-      initial: Boolean(defaultValue)
+      initial: Boolean(defaultValue),
     },
     {
       onCancel: () => {
         throw new Error("Prompt cancelled by user.");
-      }
+      },
     }
   );
 
@@ -192,7 +203,11 @@ async function askYesNo(question, defaultValue = false) {
 
 async function askChoice(question, choices, defaultValue) {
   if (!interactive) {
-    if (defaultValue === undefined || defaultValue === null || String(defaultValue).length === 0) {
+    if (
+      defaultValue === undefined ||
+      defaultValue === null ||
+      String(defaultValue).length === 0
+    ) {
       throw new Error(`${question} This value is required.`);
     }
     return defaultValue;
@@ -200,13 +215,14 @@ async function askChoice(question, choices, defaultValue) {
 
   const normalizedChoices = choices.map((choice) => ({
     title: choice,
-    value: choice
+    value: choice,
   }));
 
   const defaultIndex = Math.max(
     0,
     normalizedChoices.findIndex(
-      (choice) => choice.value.toLowerCase() === String(defaultValue ?? "").toLowerCase()
+      (choice) =>
+        choice.value.toLowerCase() === String(defaultValue ?? "").toLowerCase()
     )
   );
 
@@ -216,12 +232,12 @@ async function askChoice(question, choices, defaultValue) {
       name: "value",
       message: question,
       choices: normalizedChoices,
-      initial: defaultIndex >= 0 ? defaultIndex : 0
+      initial: defaultIndex >= 0 ? defaultIndex : 0,
     },
     {
       onCancel: () => {
         throw new Error("Prompt cancelled by user.");
-      }
+      },
     }
   );
 
@@ -230,7 +246,10 @@ async function askChoice(question, choices, defaultValue) {
 
 async function promptNewOptions(options, configDefaults = {}) {
   const defaultName = configDefaults.name || DEFAULTS.appName;
-  const defaultPackage = configDefaults.package || configDefaults.packageName || DEFAULTS.packageName;
+  const defaultPackage =
+    configDefaults.package ||
+    configDefaults.packageName ||
+    DEFAULTS.packageName;
   const defaultTemplate = configDefaults.template || DEFAULTS.template;
   const defaultMinSdk = configDefaults.minSdk ?? DEFAULTS.minSdk;
   const defaultTargetSdk = configDefaults.targetSdk ?? DEFAULTS.targetSdk;
@@ -240,55 +259,99 @@ async function promptNewOptions(options, configDefaults = {}) {
     ? configDefaults.permissions.join(",")
     : String(configDefaults.permissions || "");
   const defaultIcon = configDefaults.icon || "";
+  const defaultReactPlugins = Array.isArray(configDefaults.reactPlugins)
+    ? configDefaults.reactPlugins.join(",")
+    : String(configDefaults.reactPlugins || "");
   const signingDefaults =
-    configDefaults.signing && typeof configDefaults.signing === "object" ? configDefaults.signing : {};
+    configDefaults.signing && typeof configDefaults.signing === "object"
+      ? configDefaults.signing
+      : {};
 
   const name = String(
-    options.name ?? (await askRequired("Please enter the project name.", defaultName))
+    options.name ??
+      (await askRequired("Please enter the project name.", defaultName))
   ).trim();
 
   const packageName = String(
-    options.package ?? (await askRequired("Please enter the Android package name.", defaultPackage))
+    options.package ??
+      (await askRequired(
+        "Please enter the Android package name.",
+        defaultPackage
+      ))
   ).trim();
 
-  let template = String(options.template ?? "").trim().toLowerCase();
+  let template = String(options.template ?? "")
+    .trim()
+    .toLowerCase();
   if (!template) {
     template = String(
-      await askChoice("Please select a project template.", TEMPLATES, defaultTemplate)
+      await askChoice(
+        "Please select a project template.",
+        TEMPLATES,
+        defaultTemplate
+      )
     )
       .trim()
       .toLowerCase();
   }
 
   const minSdk = Number(
-    options.minSdk ?? (await ask("Please enter the minimum SDK level.", String(defaultMinSdk)))
+    options.minSdk ??
+      (await ask("Please enter the minimum SDK level.", String(defaultMinSdk)))
   );
   const targetSdk = Number(
-    options.targetSdk ?? (await ask("Please enter the target SDK level.", String(defaultTargetSdk)))
+    options.targetSdk ??
+      (await ask(
+        "Please enter the target SDK level.",
+        String(defaultTargetSdk)
+      ))
   );
   const compileSdk = Number(
-    options.compileSdk ?? (await ask("Please enter the compile SDK level.", String(defaultCompileSdk)))
+    options.compileSdk ??
+      (await ask(
+        "Please enter the compile SDK level.",
+        String(defaultCompileSdk)
+      ))
   );
 
   const url = String(options.url ?? "").trim();
   const finalUrl =
     url ||
     (template === "webview" || template === "pwa"
-      ? String(await askRequired("Please enter the application URL.", defaultUrl)).trim()
+      ? String(
+          await askRequired("Please enter the application URL.", defaultUrl)
+        ).trim()
       : "");
 
-  const permissionsInput = String(options.permissions ?? defaultPermissions).trim();
-  const icon = String(options.icon ?? (await ask("Please enter the icon path.", defaultIcon))).trim();
+  const permissionsInput = String(
+    options.permissions ?? defaultPermissions
+  ).trim();
+  const icon = String(
+    options.icon ?? (await ask("Please enter the icon path.", defaultIcon))
+  ).trim();
+  const reactPlugins = String(
+    options.reactPlugins ??
+      (await ask(
+        "Please enter React plugin packages (comma-separated).",
+        defaultReactPlugins
+      ))
+  ).trim();
 
   const signingDefaultValue =
     typeof configDefaults.signing === "boolean"
       ? configDefaults.signing
-      : normalizeBoolean(signingDefaults.enabled ?? signingDefaults.signingEnabled, false);
+      : normalizeBoolean(
+          signingDefaults.enabled ?? signingDefaults.signingEnabled,
+          false
+        );
 
   const signing =
     options.signing !== undefined
       ? normalizeBoolean(options.signing)
-      : await askYesNo("Would you like to enable signing scaffolding?", signingDefaultValue);
+      : await askYesNo(
+          "Would you like to enable signing scaffolding?",
+          signingDefaultValue
+        );
 
   return {
     name,
@@ -300,7 +363,8 @@ async function promptNewOptions(options, configDefaults = {}) {
     url: finalUrl,
     permissions: permissionsInput,
     icon,
-    signing
+    reactPlugins,
+    signing,
   };
 }
 
@@ -315,12 +379,19 @@ async function promptBuildOptions(projectDirArg, options, configDefaults = {}) {
   const variant =
     options.variant ??
     configDefaults.variant ??
-    (await askChoice("Please select a build variant.", ["debug", "release"], DEFAULTS.variant));
+    (await askChoice(
+      "Please select a build variant.",
+      ["debug", "release"],
+      DEFAULTS.variant
+    ));
 
   const gradleVersion = String(
     options.gradleVersion ??
       configDefaults.gradleVersion ??
-      (await ask("Please enter the Gradle version.", String(DEFAULTS.gradleVersion)))
+      (await ask(
+        "Please enter the Gradle version.",
+        String(DEFAULTS.gradleVersion)
+      ))
   ).trim();
 
   return { projectDir, variant, gradleVersion };
@@ -342,7 +413,10 @@ async function promptServeOptions(projectDirArg, options, configDefaults = {}) {
   const watch =
     options.watch !== undefined
       ? normalizeBoolean(options.watch, true)
-      : await askYesNo("Would you like to enable file watching?", configDefaults.watch ?? true);
+      : await askYesNo(
+          "Would you like to enable file watching?",
+          configDefaults.watch ?? true
+        );
 
   return { projectDir, port, watch };
 }
@@ -366,13 +440,19 @@ async function promptKeystoreOptions(options, configDefaults = {}) {
   const storePassword = String(
     options.storePassword ??
       configDefaults.storePassword ??
-      (await ask("Please enter the keystore password.", DEFAULTS.keystoreStorePassword))
+      (await ask(
+        "Please enter the keystore password.",
+        DEFAULTS.keystoreStorePassword
+      ))
   ).trim();
 
   const keyPassword = String(
     options.keyPassword ??
       configDefaults.keyPassword ??
-      (await ask("Please enter the key password.", DEFAULTS.keystoreKeyPassword))
+      (await ask(
+        "Please enter the key password.",
+        DEFAULTS.keystoreKeyPassword
+      ))
   ).trim();
 
   const dname = String(
@@ -397,7 +477,7 @@ async function promptKeystoreOptions(options, configDefaults = {}) {
     storePassword,
     keyPassword,
     dname,
-    validityDays
+    validityDays,
   };
 }
 
@@ -407,12 +487,14 @@ async function promptTestOptions(projectDirArg, configDefaults = {}) {
       projectDirArg ??
         configDefaults.projectDir ??
         (await ask("Please enter the project directory.", process.cwd()))
-    )
+    ),
   };
 }
 
 async function promptAnalyzeOptions(targetArg) {
-  const target = path.resolve(targetArg ?? (await askRequired("Please enter the APK file path.")));
+  const target = path.resolve(
+    targetArg ?? (await askRequired("Please enter the APK file path."))
+  );
   return { target };
 }
 
@@ -437,7 +519,7 @@ async function main() {
 
     await generateProject({
       ...promptOptions,
-      signing: normalizeBoolean(promptOptions.signing)
+      signing: normalizeBoolean(promptOptions.signing),
     });
     process.exit(0);
   }
@@ -453,7 +535,7 @@ async function main() {
 
     await buildProject(projectDir, {
       variant,
-      gradleVersion
+      gradleVersion,
     });
     process.exit(0);
   }
@@ -466,7 +548,11 @@ async function main() {
   if (cmd === "serve") {
     const maybeDir = argv[1] && !argv[1].startsWith("-") ? argv[1] : undefined;
     const { options } = parseFlags(argv.slice(maybeDir ? 2 : 1));
-    const { projectDir, port, watch } = await promptServeOptions(maybeDir, options, configDefaults);
+    const { projectDir, port, watch } = await promptServeOptions(
+      maybeDir,
+      options,
+      configDefaults
+    );
 
     await serveProject(projectDir, { port, watch });
     return;
@@ -480,7 +566,7 @@ async function main() {
       storePassword,
       keyPassword,
       dname,
-      validityDays
+      validityDays,
     } = await promptKeystoreOptions(options, configDefaults);
 
     const result = await createKeystore({
@@ -489,7 +575,7 @@ async function main() {
       storePassword,
       keyPassword,
       dname,
-      validityDays
+      validityDays,
     });
 
     logger.success(`Keystore created: ${result.keystorePath}`);
@@ -501,6 +587,17 @@ async function main() {
     const { projectDir } = await promptTestOptions(maybeDir, configDefaults);
 
     await runProjectTests(projectDir);
+    process.exit(0);
+  }
+
+  if (cmd === "deps") {
+    const action = String(argv[1] && !argv[1].startsWith("-") ? argv[1] : "list").toLowerCase();
+    const projectDirArg =
+      argv[2] && !argv[2].startsWith("-") ? argv[2] : undefined;
+    const flagsStart = projectDirArg ? 3 : action === "list" ? 2 : 2;
+    const { options } = parseFlags(argv.slice(flagsStart));
+
+    await runDependencyManager(projectDirArg, { action, ...options });
     process.exit(0);
   }
 

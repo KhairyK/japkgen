@@ -165,16 +165,16 @@ japkgen new \
 
 Common options:
 
-* `--name` — project name
-* `--package` — Android package name
-* `--template` — template identifier
-* `--url` — URL for WebView or frontend-based templates
-* `--min-sdk` — minimum Android SDK version
-* `--target-sdk` — target Android SDK version
-* `--compile-sdk` — compile Android SDK version
-* `--permissions` — comma-separated permissions list
-* `--signing` — enable signing scaffold
-* `--icon` — custom app icon path
+- `--name` — project name
+- `--package` — Android package name
+- `--template` — template identifier
+- `--url` — URL for WebView or frontend-based templates
+- `--min-sdk` — minimum Android SDK version
+- `--target-sdk` — target Android SDK version
+- `--compile-sdk` — compile Android SDK version
+- `--permissions` — comma-separated permissions list
+- `--signing` — enable signing scaffold
+- `--icon` — custom app icon path
 
 ### `japkgen build [projectDir]`
 
@@ -244,12 +244,12 @@ The WebView template is intended for applications that display a website inside 
 
 It includes:
 
-* JavaScript support
-* DOM storage support
-* URL navigation handling
-* Basic loading progress feedback
-* Pull-to-refresh support
-* Sensible default permissions when needed
+- JavaScript support
+- DOM storage support
+- URL navigation handling
+- Basic loading progress feedback
+- Pull-to-refresh support
+- Sensible default permissions when needed
 
 ### Web APK
 
@@ -257,12 +257,12 @@ The Web APK template is designed for frontend-driven Android delivery.
 
 It may include:
 
-* Tailwind CSS
-* Material UI
-* Material Icons / Material Symbols
-* XML to JSON helper utilities
-* Vite-based frontend bundling
-* Google Fonts CDN support
+- Tailwind CSS
+- Material UI
+- Material Icons / Material Symbols
+- XML to JSON helper utilities
+- Vite-based frontend bundling
+- Google Fonts CDN support
 
 ### Native
 
@@ -365,10 +365,10 @@ Example:
 
 Common uses:
 
-* define default project values
-* store template-specific configuration
-* keep repeated options in one place
-* reduce CLI input for regular workflows
+- define default project values
+- store template-specific configuration
+- keep repeated options in one place
+- reduce CLI input for regular workflows
 
 ## Environment Detection
 
@@ -376,15 +376,15 @@ The environment detection module helps contributors and users understand whether
 
 It inspects:
 
-* Operating system
-* CPU architecture
-* Node.js version
-* Java availability
-* Gradle availability
-* Android SDK discovery
-* Platform tools presence
-* Build tools presence
-* Common package manager support
+- Operating system
+- CPU architecture
+- Node.js version
+- Java availability
+- Gradle availability
+- Android SDK discovery
+- Platform tools presence
+- Build tools presence
+- Common package manager support
 
 This makes troubleshooting faster and reduces setup friction.
 
@@ -412,12 +412,12 @@ npm test
 
 Useful things to verify:
 
-* template generation
-* config loading
-* environment detection
-* utility functions
-* build scaffolding
-* README output or generated documentation
+- template generation
+- config loading
+- environment detection
+- utility functions
+- build scaffolding
+- README output or generated documentation
 
 ## Contributing
 
@@ -434,10 +434,10 @@ Recommended contribution workflow:
 
 Please keep contributions:
 
-* clear
-* modular
-* well documented
-* consistent with the existing project structure
+- clear
+- modular
+- well documented
+- consistent with the existing project structure
 
 ## License
 

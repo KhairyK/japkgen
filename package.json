@@ -1,7 +1,7 @@
 {
   "name": "japkgen",
-  "version": "2.0.0-rc.1",
-  "description": "JAPK - A Java Application Template Generator.",
+  "version": "2.1.0",
+  "description": "Modern Android app generator and APK builder CLI with smart templates and optimized tooling.",
   "keywords": [
     "javac",
     "java",
@@ -10,7 +10,39 @@
     "apk",
     "app",
     "generator",
-    "cli"
+    "cli",
+    "android",
+    "android-cli",
+    "android-build",
+    "android-generator",
+    "android-sdk",
+    "android-development",
+    "kotlin",
+    "java-compiler",
+    "apk-builder",
+    "apk-generator",
+    "apk-compiler",
+    "boilerplate",
+    "template",
+    "scaffold",
+    "starter",
+    "project-generator",
+    "webview",
+    "jetpack-compose",
+    "compose",
+    "native-app",
+    "vite",
+    "react",
+    "vue",
+    "angular",
+    "preact",
+    "cross-platform",
+    "mobile-development",
+    "mobile-cli",
+    "terminal",
+    "developer-tools",
+    "tooling",
+    "japkgen"
   ],
   "homepage": "https://japkgen.opendnf.cloud/",
   "repository": {
@@ -46,9 +78,17 @@
   },
   "scripts": {
     "notice": "npx noticg",
-    "test": "node test/core.test.js"
+    "test": "node test/core.test.js",
+    "format": "npx prettier . --write",
+    "lint": "npx eslint .",
+    "lint:init": "npx eslint --init",
+    "clean": "rm -rf node_modules package-lock.json logs"
   },
   "devDependencies": {
-    "noticg": "^0.2.0"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
+    "noticg": "^0.2.0",
+    "prettier": "^3.8.3"
   }
 }
