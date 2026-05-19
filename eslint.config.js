@@ -6,11 +6,16 @@ export default defineConfig([
   {
     files: ["**/*.{js,mjs,cjs}"],
     plugins: { js },
+    ignores: [
+      "test/",
+      "node_modules/",
+      "web/"
+    ],
     extends: ["js/recommended"],
     languageOptions: { globals: globals.node },
     rules: {
       semi: ["error", "always"],
-      quotes: ["error", "double"],
+      quotes: ["warn", "double"],
       "no-unused-vars": "warn",
       "no-control-regex": "off",
       "no-empty": "warn",

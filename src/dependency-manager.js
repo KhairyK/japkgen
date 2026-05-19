@@ -3,22 +3,43 @@ import fs from 'node:fs/promises';
 import { fileExists, writeFileEnsured, parseList, uniq } from './utils.js';
 import { logger } from './logger.js';
 
+/**
+ * Normalizes Dependency.
+ * @param {*} input
+ * @returns {*}
+ */
 function normalizeDependency(input = '') {
   const text = String(input).trim().replace(/^['"]|['"]$/g, '');
   if (!text) return null;
   return text;
 }
 
+/**
+ * Scopes Of Dependency.
+ * @param {*} line
+ * @returns {*}
+ */
 function scopeOfDependency(line = '') {
   const match = String(line).trim().match(/^(implementation|api|compileOnly|runtimeOnly|kapt|debugImplementation|releaseImplementation|testImplementation|androidTestImplementation)\s+['"]([^'"]+)['"]/);
   if (!match) return null;
   return { scope: match[1], dependency: match[2] };
 }
 
+/**
+ * Dependencys Line.
+ * @param {*} scope
+ * @param {*} dep
+ * @returns {string}
+ */
 function dependencyLine(scope, dep) {
   return `    ${scope} '${dep}'`;
 }
 
+/**
+ * Reads Build Gradle.
+ * @param {*} projectDir
+ * @returns {Promise<Object>}
+ */
 async function readBuildGradle(projectDir) {
   const buildGradlePath = path.join(projectDir, 'app', 'build.gradle');
   if (!(await fileExists(buildGradlePath))) {
@@ -27,6 +48,12 @@ async function readBuildGradle(projectDir) {
   return { buildGradlePath, content: await fs.readFile(buildGradlePath, 'utf8') };
 }
 
+/**
+ * Updates Dependencies Block.
+ * @param {*} content
+ * @param {*} updater
+ * @returns {*}
+ */
 function updateDependenciesBlock(content, updater) {
   const match = content.match(/dependencies\s*\{[\s\S]*\n\}/m);
   if (!match) throw new Error('Could not find dependencies { } block in app/build.gradle');
@@ -38,6 +65,11 @@ function updateDependenciesBlock(content, updater) {
   return content.replace(block, nextBlock);
 }
 
+/**
+ * Lists Project Dependencies.
+ * @param {*} projectDir
+ * @returns {Promise<*>}
+ */
 export async function listProjectDependencies(projectDir) {
   const { content } = await readBuildGradle(projectDir);
   const deps = [];
@@ -57,16 +89,38 @@ export async function listProjectDependencies(projectDir) {
   return deps;
 }
 
+/**
+ * Adds Project Dependency.
+ * @param {*} projectDir
+ * @param {*} dependency
+ * @param {*} scope
+ * @returns {Promise<Object>}
+ */
 export async function addProjectDependency(projectDir, dependency, scope = 'implementation') {
   const dep = normalizeDependency(dependency);
   if (!dep) throw new Error('Dependency coordinate is required.');
 
   const { buildGradlePath, content } = await readBuildGradle(projectDir);
   let updated = false;
-  const next = updateDependenciesBlock(content, (body) => {
-    const existing = body.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const next = updateDependenciesBlock(content, /**
+   * Functions a value.
+   * @param {*} body
+   * @returns {*}
+   */
+  body => {
+    const existing = body.split(/\r?\n/).map(/**
+     * Functions a value.
+     * @param {*} line
+     * @returns {*}
+     */
+    line => line.trim()).filter(Boolean);
     const targetLine = dependencyLine(scope, dep).trim();
-    if (existing.some((line) => line.replace(/\s+/g, ' ') === targetLine.replace(/\s+/g, ' '))) {
+    if (existing.some(/**
+     * Functions a value.
+     * @param {*} line
+     * @returns {boolean}
+     */
+    line => line.replace(/\s+/g, ' ') === targetLine.replace(/\s+/g, ' '))) {
       return body;
     }
     updated = true;
@@ -80,15 +134,31 @@ export async function addProjectDependency(projectDir, dependency, scope = 'impl
   return { updated, buildGradlePath };
 }
 
+/**
+ * Removes Project Dependency.
+ * @param {*} projectDir
+ * @param {*} dependency
+ * @returns {Promise<Object>}
+ */
 export async function removeProjectDependency(projectDir, dependency) {
   const dep = normalizeDependency(dependency);
   if (!dep) throw new Error('Dependency coordinate is required.');
 
   const { buildGradlePath, content } = await readBuildGradle(projectDir);
   let removed = false;
-  const next = updateDependenciesBlock(content, (body) => {
+  const next = updateDependenciesBlock(content, /**
+   * Functions a value.
+   * @param {*} body
+   * @returns {*}
+   */
+  body => {
     const lines = body.split(/\r?\n/);
-    const filtered = lines.filter((line) => {
+    const filtered = lines.filter(/**
+     * Functions a value.
+     * @param {*} line
+     * @returns {boolean}
+     */
+    line => {
       const parsed = scopeOfDependency(line.trim());
       if (!parsed) return true;
       if (parsed.dependency === dep) {
@@ -106,6 +176,12 @@ export async function removeProjectDependency(projectDir, dependency) {
   return { removed, buildGradlePath };
 }
 
+/**
+ * Runs Dependency Manager.
+ * @param {*} projectDirArg
+ * @param {*} options
+ * @returns {Promise<Object>}
+ */
 export async function runDependencyManager(projectDirArg, options = {}) {
   const projectDir = path.resolve(projectDirArg || process.cwd());
   if (!(await fileExists(projectDir))) {

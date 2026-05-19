@@ -2,6 +2,13 @@ import path from "node:path";
 import { fileExists, findFiles, readText, hasHttpUrl } from "./utils.js";
 import { logger } from "./logger.js";
 
+/**
+ * Checks a value.
+ * @param {*} ok
+ * @param {*} label
+ * @param {*} details
+ * @returns {*}
+ */
 function check(ok, label, details = "") {
   if (ok) {
     logger.success(label);
@@ -11,6 +18,11 @@ function check(ok, label, details = "") {
   return ok;
 }
 
+/**
+ * Expecteds Main Source.
+ * @param {*} projectDir
+ * @returns {Array}
+ */
 function expectedMainSource(projectDir) {
   return [
     path.join(projectDir, "app", "src", "main", "java"),
@@ -18,6 +30,11 @@ function expectedMainSource(projectDir) {
   ];
 }
 
+/**
+ * Runs Project Tests.
+ * @param {*} projectDirArg
+ * @returns {Promise<*>}
+ */
 export async function runProjectTests(projectDirArg = process.cwd()) {
   const projectDir = path.resolve(projectDirArg);
   const report = {
@@ -43,6 +60,12 @@ export async function runProjectTests(projectDirArg = process.cwd()) {
 
   const manifests = await findFiles(
     path.join(projectDir, "app", "src", "main"),
+    /**
+     * Functions a value.
+     * @param {*} abs
+     * @param {*} rel
+     * @returns {*}
+     */
     (abs, rel) => rel.endsWith("AndroidManifest.xml"),
     { maxDepth: 4 }
   );
@@ -59,6 +82,12 @@ export async function runProjectTests(projectDirArg = process.cwd()) {
   for (const root of expectedMainSource(projectDir)) {
     const files = await findFiles(
       root,
+      /**
+       * Functions a value.
+       * @param {*} abs
+       * @param {*} rel
+       * @returns {*}
+       */
       (abs, rel) => rel.endsWith(".java") || rel.endsWith(".kt"),
       { maxDepth: 8 }
     );
@@ -74,8 +103,13 @@ export async function runProjectTests(projectDirArg = process.cwd()) {
 
   const assetFiles = await findFiles(
     path.join(projectDir, "app", "src", "main", "assets"),
-    (abs, rel) =>
-      rel.endsWith(".html") || rel.endsWith(".js") || rel.endsWith(".css"),
+    /**
+     * Functions a value.
+     * @param {*} abs
+     * @param {*} rel
+     * @returns {*}
+     */
+    (abs, rel) => rel.endsWith(".html") || rel.endsWith(".js") || rel.endsWith(".css"),
     { maxDepth: 8 }
   );
   if (assetFiles.length) {
@@ -99,6 +133,11 @@ export async function runProjectTests(projectDirArg = process.cwd()) {
   return report;
 }
 
+/**
+ * Checks whether Likely Web Url.
+ * @param {*} url
+ * @returns {*}
+ */
 export function isLikelyWebUrl(url = "") {
   return hasHttpUrl(url);
 }

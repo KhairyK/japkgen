@@ -3,6 +3,11 @@ import { pathToFileURL } from "node:url";
 import { fileExists, readJson } from "./utils.js";
 import { PLUGIN_CONFIG_FILES } from "./constants.js";
 
+/**
+ * Normalizes Template Export.
+ * @param {*} value
+ * @returns {*}
+ */
 function normalizeTemplateExport(value) {
   if (!value) return null;
   if (typeof value === "function") return { factory: value };
@@ -10,6 +15,12 @@ function normalizeTemplateExport(value) {
   return value;
 }
 
+/**
+ * Normalizes Plugin.
+ * @param {*} plugin
+ * @param {*} origin
+ * @returns {*}
+ */
 function normalizePlugin(plugin, origin = "unknown") {
   if (!plugin || typeof plugin !== "object") return null;
 
@@ -45,6 +56,11 @@ function normalizePlugin(plugin, origin = "unknown") {
   return normalized;
 }
 
+/**
+ * Trys Import.
+ * @param {*} filePath
+ * @returns {Promise<*>}
+ */
 async function tryImport(filePath) {
   try {
     return await import(pathToFileURL(filePath).href);
@@ -53,6 +69,12 @@ async function tryImport(filePath) {
   }
 }
 
+/**
+ * Collects From Module.
+ * @param {*} mod
+ * @param {*} origin
+ * @returns {*}
+ */
 function collectFromModule(mod, origin) {
   if (!mod) return null;
   const candidates = [];
@@ -76,6 +98,11 @@ function collectFromModule(mod, origin) {
   return plugins;
 }
 
+/**
+ * Loads Plugins.
+ * @param {*} projectDir
+ * @returns {Promise<Object>}
+ */
 export async function loadPlugins(projectDir = process.cwd()) {
   const roots = [projectDir, process.cwd()];
   const seen = new Set();
@@ -131,6 +158,12 @@ export async function loadPlugins(projectDir = process.cwd()) {
   return { plugins, templates, hooks };
 }
 
+/**
+ * Runs Hooks.
+ * @param {*} hooks
+ * @param {*} context
+ * @returns {Promise<void>}
+ */
 export async function runHooks(hooks, context) {
   for (const hook of hooks || []) {
     await hook(context);

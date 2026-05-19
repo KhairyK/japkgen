@@ -36,6 +36,10 @@ const FALLBACK_PNGS = {
   ),
 };
 
+/**
+ * Loads Sharp.
+ * @returns {Promise<*>}
+ */
 async function loadSharp() {
   try {
     const mod = await import("sharp");
@@ -45,6 +49,11 @@ async function loadSharp() {
   }
 }
 
+/**
+ * Generates Icons.
+ * @param {Object} param
+ * @returns {Promise<void>}
+ */
 export async function generateIcons({ projectDir, appName, iconPath }) {
   const baseResDir = path.join(projectDir, "app", "src", "main", "res");
   const sharp = await loadSharp();

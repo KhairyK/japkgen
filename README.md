@@ -1,4 +1,6 @@
-# JAPKGEN
+# JAPK Generator
+
+[![NPM](https://nodei.co/npm/japkgen.svg?data=d,s)](https://nodei.co/npm/japkgen/)
 
 [![npm version](https://img.shields.io/npm/v/japkgen.svg)](https://www.npmjs.com/package/japkgen)
 [![npm downloads](https://img.shields.io/npm/dm/japkgen.svg)](https://www.npmjs.com/package/japkgen)
@@ -10,8 +12,6 @@
 [![contributors welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 JAPKGEN is a modular command-line tool for generating Android and hybrid project scaffolds with a structured, developer-friendly workflow. It supports project generation, environment diagnostics, WebView and Web APK templates, native Android templates, C/C++ game scaffolding, release signing setup, and modern frontend templates powered by Vite.
-
-Current beta release: **2.0.0-beta.2**
 
 ## Table of Contents
 
@@ -48,8 +48,6 @@ It is suitable for developers who want to scaffold:
 
 ## Features
 
-- Modular CLI architecture
-- Interactive prompts powered by `prompts`
 - Debug-friendly logging output
 - WebView template with improved loading and navigation behavior
 - Web APK template support with:

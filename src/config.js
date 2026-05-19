@@ -8,12 +8,22 @@ export const CONFIG_FILES = [
   "japkgen.config.json",
 ];
 
+/**
+ * Normalizes Object.
+ * @param {*} value
+ * @returns {*}
+ */
 function normalizeObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
     : {};
 }
 
+/**
+ * Picks Config Root.
+ * @param {*} raw
+ * @returns {*}
+ */
 function pickConfigRoot(raw) {
   if (!raw || typeof raw !== "object") return {};
   if (raw.japkgen && typeof raw.japkgen === "object") return raw.japkgen;
@@ -21,6 +31,12 @@ function pickConfigRoot(raw) {
   return raw;
 }
 
+/**
+ * Normalizes Config.
+ * @param {*} raw
+ * @param {*} filePath
+ * @returns {Object}
+ */
 function normalizeConfig(raw, filePath = null) {
   const root = pickConfigRoot(raw);
   const defaults = {
@@ -65,11 +81,21 @@ function normalizeConfig(raw, filePath = null) {
   };
 }
 
+/**
+ * Trys Load Module.
+ * @param {*} filePath
+ * @returns {Promise<*>}
+ */
 async function tryLoadModule(filePath) {
   const mod = await import(pathToFileURL(filePath).href);
   return mod?.default ?? mod?.config ?? mod;
 }
 
+/**
+ * Loads Project Config.
+ * @param {*} cwd
+ * @returns {Promise<*>}
+ */
 export async function loadProjectConfig(cwd = process.cwd()) {
   for (const fileName of CONFIG_FILES) {
     const filePath = path.resolve(cwd, fileName);

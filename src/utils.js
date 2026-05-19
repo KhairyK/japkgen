@@ -4,6 +4,11 @@ import path from "node:path";
 import os from "node:os";
 import { spawn } from "node:child_process";
 
+/**
+ * Normalizes Path Value.
+ * @param {*} input
+ * @returns {*}
+ */
 export function normalizePathValue(input = "") {
   return String(input)
     .replaceAll("\\", "/")
@@ -12,10 +17,20 @@ export function normalizePathValue(input = "") {
     .replace(/^\//, "");
 }
 
+/**
+ * Tos Package Path.
+ * @param {*} pkg
+ * @returns {*}
+ */
 export function toPackagePath(pkg = "") {
   return normalizePathValue(String(pkg).trim().replaceAll(".", "/"));
 }
 
+/**
+ * Tos Jni Package.
+ * @param {*} pkg
+ * @returns {*}
+ */
 export function toJniPackage(pkg = "") {
   return normalizePathValue(String(pkg).trim().replaceAll(".", "/")).replaceAll(
     "/",
@@ -23,38 +38,90 @@ export function toJniPackage(pkg = "") {
   );
 }
 
+/**
+ * Applys Template.
+ * @param {*} content
+ * @param {*} vars
+ * @returns {*}
+ */
 export function applyTemplate(content, vars) {
-  return String(content).replace(/__([A-Z0-9_]+)__/g, (match, key) => {
+  return String(content).replace(/__([A-Z0-9_]+)__/g, /**
+   * Functions a value.
+   * @param {*} match
+   * @param {*} key
+   * @returns {*}
+   */
+  (match, key) => {
     return Object.prototype.hasOwnProperty.call(vars, key)
       ? String(vars[key])
       : match;
   });
 }
 
+/**
+ * Parses List.
+ * @param {*} input
+ * @returns {*}
+ */
 export function parseList(input = "") {
   if (Array.isArray(input)) {
-    return input.map((v) => String(v).trim()).filter(Boolean);
+    return input.map(/**
+     * Functions a value.
+     * @param {*} v
+     * @returns {*}
+     */
+    v => String(v).trim()).filter(Boolean);
   }
   return String(input)
     .split(",")
-    .map((v) => v.trim())
+    .map(/**
+   * Functions a value.
+   * @param {*} v
+   * @returns {*}
+   */
+  v => v.trim())
     .filter(Boolean);
 }
 
+/**
+ * Parses Permissions.
+ * @param {*} input
+ * @returns {*}
+ */
 export function parsePermissions(input = "") {
-  return parseList(input).map((perm) =>
-    perm.startsWith("android.permission.") ? perm : `android.permission.${perm}`
+  return parseList(input).map(/**
+   * Functions a value.
+   * @param {*} perm
+   * @returns {*}
+   */
+  perm => perm.startsWith("android.permission.") ? perm : `android.permission.${perm}`
   );
 }
 
+/**
+ * Uniqs a value.
+ * @param {*} list
+ * @returns {Array}
+ */
 export function uniq(list = []) {
   return [...new Set(list.filter(Boolean))];
 }
 
+/**
+ * Checks whether Http Url.
+ * @param {*} url
+ * @returns {*}
+ */
 export function hasHttpUrl(url = "") {
   return /^https?:\/\//i.test(String(url).trim());
 }
 
+/**
+ * Normalizes Boolean.
+ * @param {*} value
+ * @param {*} defaultValue
+ * @returns {*}
+ */
 export function normalizeBoolean(value, defaultValue = false) {
   if (typeof value === "boolean") return value;
   if (value == null) return defaultValue;
@@ -64,15 +131,31 @@ export function normalizeBoolean(value, defaultValue = false) {
   return defaultValue;
 }
 
+/**
+ * Writes File Ensured.
+ * @param {*} filePath
+ * @param {*} content
+ * @returns {Promise<void>}
+ */
 export async function writeFileEnsured(filePath, content) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content, "utf8");
 }
 
+/**
+ * Reads Text.
+ * @param {*} filePath
+ * @returns {Promise<*>}
+ */
 export async function readText(filePath) {
   return fs.readFile(filePath, "utf8");
 }
 
+/**
+ * Files Exists.
+ * @param {*} filePath
+ * @returns {Promise<boolean>}
+ */
 export async function fileExists(filePath) {
   try {
     await fs.access(filePath);
@@ -82,6 +165,11 @@ export async function fileExists(filePath) {
   }
 }
 
+/**
+ * Templates Exists.
+ * @param {*} projectDir
+ * @returns {Promise<*>}
+ */
 export async function templateExists(projectDir) {
   const gradlew =
     process.platform === "win32"
@@ -106,6 +194,10 @@ export async function templateExists(projectDir) {
   );
 }
 
+/**
+ * Gets Default Android Sdk Paths.
+ * @returns {*}
+ */
 export function getDefaultAndroidSdkPaths() {
   const home = os.homedir();
 
@@ -129,6 +221,11 @@ export function getDefaultAndroidSdkPaths() {
   return [path.join(home, "Android", "Sdk")];
 }
 
+/**
+ * Files Exists Any.
+ * @param {*} paths
+ * @returns {Promise<*>}
+ */
 export async function fileExistsAny(paths = []) {
   for (const p of paths) {
     if (!p) continue;
@@ -137,11 +234,31 @@ export async function fileExistsAny(paths = []) {
   return null;
 }
 
+/**
+ * Normalizes Rel Path.
+ * @param {*} input
+ * @returns {*}
+ */
 export function normalizeRelPath(input = "") {
   return String(input).replaceAll("\\", "/");
 }
 
-export async function findFiles(rootDir, predicate = () => true, options = {}) {
+/**
+ * Finds Files.
+ * @param {*} rootDir
+ * @param {*} predicate
+ * @param {*} options
+ * @returns {Promise<*>}
+ */
+export async function findFiles(
+  rootDir,
+  predicate = /**
+   * Functions a value.
+   * @returns {boolean}
+   */
+  () => true,
+  options = {}
+) {
   const results = [];
   const maxDepth = options.maxDepth ?? 8;
 
@@ -168,6 +285,13 @@ export async function findFiles(rootDir, predicate = () => true, options = {}) {
   return results;
 }
 
+/**
+ * Spawns Async.
+ * @param {*} command
+ * @param {*} args
+ * @param {*} options
+ * @returns {*}
+ */
 function spawnAsync(command, args = [], options = {}) {
   const {
     cwd = process.cwd(),
@@ -176,7 +300,12 @@ function spawnAsync(command, args = [], options = {}) {
     stdio = "pipe",
   } = options;
 
-  return new Promise((resolve, reject) => {
+  return new Promise(/**
+   * Functions a value.
+   * @param {*} resolve
+   * @param {*} reject
+   */
+  (resolve, reject) => {
     const child = spawn(command, args, {
       cwd,
       env,
@@ -189,18 +318,30 @@ function spawnAsync(command, args = [], options = {}) {
     let stderr = "";
 
     if (child.stdout && stdio !== "inherit") {
-      child.stdout.on("data", (chunk) => {
+      child.stdout.on("data", /**
+       * Functions a value.
+       * @param {*} chunk
+       */
+      chunk => {
         stdout += chunk.toString();
       });
     }
 
     if (child.stderr && stdio !== "inherit") {
-      child.stderr.on("data", (chunk) => {
+      child.stderr.on("data", /**
+       * Functions a value.
+       * @param {*} chunk
+       */
+      chunk => {
         stderr += chunk.toString();
       });
     }
 
-    child.on("error", (error) => {
+    child.on("error", /**
+     * Functions a value.
+     * @param {*} error
+     */
+    error => {
       const result = {
         ok: false,
         stdout,
@@ -219,7 +360,11 @@ function spawnAsync(command, args = [], options = {}) {
       }
     });
 
-    child.on("close", (code) => {
+    child.on("close", /**
+     * Functions a value.
+     * @param {*} code
+     */
+    code => {
       const result = {
         ok: code === 0,
         stdout,
@@ -244,15 +389,33 @@ function spawnAsync(command, args = [], options = {}) {
   });
 }
 
+/**
+ * Runs Command.
+ * @param {*} command
+ * @param {*} args
+ * @param {*} options
+ * @returns {Promise<*>}
+ */
 export async function runCommand(command, args = [], options = {}) {
   return spawnAsync(command, args, options);
 }
 
+/**
+ * Detects Command.
+ * @param {*} command
+ * @param {*} args
+ * @returns {Promise<*>}
+ */
 export async function detectCommand(command, args = ["--version"]) {
   const result = await runCommand(command, args, { reject: false });
   return result.ok;
 }
 
+/**
+ * Pythons Zip List.
+ * @param {*} filePath
+ * @returns {Promise<*>}
+ */
 async function pythonZipList(filePath) {
   const script = [
     "import sys, zipfile",
@@ -279,6 +442,11 @@ async function pythonZipList(filePath) {
   );
 }
 
+/**
+ * Lists Zip Entries With Unzip.
+ * @param {*} filePath
+ * @returns {Promise<*>}
+ */
 export async function listZipEntriesWithUnzip(filePath) {
   const unzipResult = await runCommand("unzip", ["-l", filePath], {
     reject: false,
@@ -289,6 +457,11 @@ export async function listZipEntriesWithUnzip(filePath) {
   return pythonZipList(filePath);
 }
 
+/**
+ * Humans Bytes.
+ * @param {*} bytes
+ * @returns {string}
+ */
 export function humanBytes(bytes = 0) {
   const units = ["B", "KB", "MB", "GB"];
   let value = Number(bytes) || 0;
@@ -300,6 +473,11 @@ export function humanBytes(bytes = 0) {
   return `${value.toFixed(value >= 10 || idx === 0 ? 0 : 1)} ${units[idx]}`;
 }
 
+/**
+ * Picks First Defined.
+ * @param {*} ...values
+ * @returns {*}
+ */
 export function pickFirstDefined(...values) {
   for (const value of values) {
     if (value !== undefined && value !== null && String(value).trim() !== "")
@@ -308,21 +486,42 @@ export function pickFirstDefined(...values) {
   return undefined;
 }
 
+/**
+ * Escapes Reg Exp.
+ * @param {*} input
+ * @returns {*}
+ */
 export function escapeRegExp(input = "") {
   return String(input).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * Capitalizes a value.
+ * @param {*} input
+ * @returns {*}
+ */
 export function capitalize(input = "") {
   const s = String(input);
   return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 
+/**
+ * Ass Array.
+ * @param {*} value
+ * @returns {*}
+ */
 export function asArray(value) {
   if (Array.isArray(value)) return value;
   if (value == null) return [];
   return [value];
 }
 
+/**
+ * Reads Json.
+ * @param {*} filePath
+ * @param {*} fallback
+ * @returns {Promise<*>}
+ */
 export async function readJson(filePath, fallback = null) {
   try {
     const text = await fs.readFile(filePath, "utf8");
@@ -332,6 +531,11 @@ export async function readJson(filePath, fallback = null) {
   }
 }
 
+/**
+ * Safes File Name.
+ * @param {*} input
+ * @returns {*}
+ */
 export function safeFileName(input = "") {
   return String(input)
     .trim()

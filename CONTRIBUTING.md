@@ -55,18 +55,48 @@ japkgen --help
 ## Project Structure
 
 ```
-src
-├── build.js
-├── constants.js
-├── doctor.js
-├── environment.js
-├── generator.js
-├── icons.js
-├── index.js
-├── signing.js
-├── templates.js
-├── types.js
-└── utils.js
+.
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── eslint.config.js
+├── LICENSE
+├── logs
+│   └── README.md
+├── NOTICE.md
+├── package.json
+├── packages
+├── README.md
+├── SECURITY.md
+├── src
+│   ├── analyze.js
+│   ├── build.js
+│   ├── config.js
+│   ├── constants.js
+│   ├── debug.js
+│   ├── dependency-manager.js
+│   ├── doctor.js
+│   ├── environment.js
+│   ├── generator.js
+│   ├── icons.js
+│   ├── index.js
+│   ├── logger.js
+│   ├── plugins.js
+│   ├── serve.js
+│   ├── signing.js
+│   ├── templates.js
+│   ├── test.js
+│   └── utils.js
+├── test
+│   └── core.test.js
+└── web
+    ├── assets
+    │   ├── aos.css
+    │   ├── App.jsx
+    │   ├── favicon.svg
+    │   └── index.jsx
+    ├── index.html
+    ├── package.json
+    └── vite.config.js
 ```
 
 ---

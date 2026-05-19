@@ -17,12 +17,15 @@ import { analyzeApk } from "./analyze.js";
 import { runDependencyManager } from "./dependency-manager.js";
 import { normalizeBoolean } from "./utils.js";
 
-const VERSION = "2.0.0";
+const VERSION = "2.1.1";
 const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY);
 const YEAR = new Date().getFullYear();
 
 const TEMPLATES = [...SUPPORTED_TEMPLATES];
 
+/**
+ * Usages a value.
+ */
 function usage() {
   console.log(`
 ${pc.bold(pc.cyan("JAPK Generator"))} ${pc.green(VERSION)}
@@ -48,7 +51,12 @@ ${pc.bold(pc.yellow("Commands:"))}
   ${pc.green("deps")}        ${pc.dim("Manage app/build.gradle dependencies")}
 
 ${pc.bold(pc.yellow("Templates:"))}
-  ${TEMPLATES.map((t) => pc.magenta(t)).join("\n  ")}
+  ${TEMPLATES.map(/**
+   * Functions a value.
+   * @param {*} t
+   * @returns {*}
+   */
+  t => pc.magenta(t)).join("\n  ")}
 
 ${pc.bold(pc.yellow("Config file:"))}
   ${pc.dim(
@@ -83,6 +91,11 @@ ${pc.bold(pc.yellow("Options:"))}
   process.exit(0);
 }
 
+/**
+ * Parses Flags.
+ * @param {*} argv
+ * @returns {Object}
+ */
 function parseFlags(argv) {
   const options = {};
   const rest = [];
@@ -99,7 +112,13 @@ function parseFlags(argv) {
       ? arg.slice(2).split("=")
       : [arg.slice(1), null];
 
-    const name = key.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    const name = key.replace(/-([a-z])/g, /**
+     * Functions a value.
+     * @param {*} _
+     * @param {*} c
+     * @returns {*}
+     */
+    (_, c) => c.toUpperCase());
     const value =
       inlineValue ??
       (i + 1 < argv.length && !argv[i + 1].startsWith("-") ? argv[++i] : true);
@@ -110,11 +129,23 @@ function parseFlags(argv) {
   return { options, rest };
 }
 
+/**
+ * Tos String Value.
+ * @param {*} value
+ * @param {*} fallback
+ * @returns {*}
+ */
 function toStringValue(value, fallback = "") {
   if (value === undefined || value === null) return String(fallback ?? "");
   return String(value);
 }
 
+/**
+ * Asks a value.
+ * @param {*} question
+ * @param {*} defaultValue
+ * @returns {Promise<*>}
+ */
 async function ask(question, defaultValue = "") {
   if (!interactive) {
     return toStringValue(defaultValue);
@@ -133,6 +164,9 @@ async function ask(question, defaultValue = "") {
       initial: hasDefault ? String(defaultValue) : undefined,
     },
     {
+      /**
+       * Ons Cancel.
+       */
       onCancel: () => {
         throw new Error("Prompt cancelled by user.");
       },
@@ -143,6 +177,12 @@ async function ask(question, defaultValue = "") {
   return value.length > 0 ? value : toStringValue(defaultValue);
 }
 
+/**
+ * Asks Required.
+ * @param {*} question
+ * @param {*} defaultValue
+ * @returns {Promise<*>}
+ */
 async function askRequired(question, defaultValue = "") {
   if (!interactive) {
     const fallback = toStringValue(defaultValue).trim();
@@ -162,12 +202,20 @@ async function askRequired(question, defaultValue = "") {
           String(defaultValue).length > 0
             ? String(defaultValue)
             : undefined,
+        /**
+         * Validates a value.
+         * @param {*} value
+         * @returns {*}
+         */
         validate: (value) => {
           const text = String(value ?? "").trim();
           return text.length > 0 ? true : "A value is required.";
         },
       },
       {
+        /**
+         * Ons Cancel.
+         */
         onCancel: () => {
           throw new Error("Prompt cancelled by user.");
         },
@@ -179,6 +227,12 @@ async function askRequired(question, defaultValue = "") {
   }
 }
 
+/**
+ * Asks Yes No.
+ * @param {*} question
+ * @param {*} defaultValue
+ * @returns {Promise<*>}
+ */
 async function askYesNo(question, defaultValue = false) {
   if (!interactive) {
     return Boolean(defaultValue);
@@ -192,6 +246,9 @@ async function askYesNo(question, defaultValue = false) {
       initial: Boolean(defaultValue),
     },
     {
+      /**
+       * Ons Cancel.
+       */
       onCancel: () => {
         throw new Error("Prompt cancelled by user.");
       },
@@ -201,6 +258,13 @@ async function askYesNo(question, defaultValue = false) {
   return Boolean(response.value);
 }
 
+/**
+ * Asks Choice.
+ * @param {*} question
+ * @param {*} choices
+ * @param {*} defaultValue
+ * @returns {Promise<*>}
+ */
 async function askChoice(question, choices, defaultValue) {
   if (!interactive) {
     if (
@@ -213,16 +277,25 @@ async function askChoice(question, choices, defaultValue) {
     return defaultValue;
   }
 
-  const normalizedChoices = choices.map((choice) => ({
+  const normalizedChoices = choices.map(/**
+   * Functions a value.
+   * @param {*} choice
+   * @returns {Object}
+   */
+  choice => ({
     title: choice,
-    value: choice,
+    value: choice
   }));
 
   const defaultIndex = Math.max(
     0,
     normalizedChoices.findIndex(
-      (choice) =>
-        choice.value.toLowerCase() === String(defaultValue ?? "").toLowerCase()
+      /**
+       * Functions a value.
+       * @param {*} choice
+       * @returns {boolean}
+       */
+      choice => choice.value.toLowerCase() === String(defaultValue ?? "").toLowerCase()
     )
   );
 
@@ -235,6 +308,9 @@ async function askChoice(question, choices, defaultValue) {
       initial: defaultIndex >= 0 ? defaultIndex : 0,
     },
     {
+      /**
+       * Ons Cancel.
+       */
       onCancel: () => {
         throw new Error("Prompt cancelled by user.");
       },
@@ -244,6 +320,12 @@ async function askChoice(question, choices, defaultValue) {
   return response.value ?? defaultValue;
 }
 
+/**
+ * Prompts New Options.
+ * @param {*} options
+ * @param {*} configDefaults
+ * @returns {Promise<Object>}
+ */
 async function promptNewOptions(options, configDefaults = {}) {
   const defaultName = configDefaults.name || DEFAULTS.appName;
   const defaultPackage =
@@ -368,6 +450,13 @@ async function promptNewOptions(options, configDefaults = {}) {
   };
 }
 
+/**
+ * Prompts Build Options.
+ * @param {*} projectDirArg
+ * @param {*} options
+ * @param {*} configDefaults
+ * @returns {Promise<Object>}
+ */
 async function promptBuildOptions(projectDirArg, options, configDefaults = {}) {
   const projectDir = path.resolve(
     projectDirArg ??
@@ -397,6 +486,13 @@ async function promptBuildOptions(projectDirArg, options, configDefaults = {}) {
   return { projectDir, variant, gradleVersion };
 }
 
+/**
+ * Prompts Serve Options.
+ * @param {*} projectDirArg
+ * @param {*} options
+ * @param {*} configDefaults
+ * @returns {Promise<Object>}
+ */
 async function promptServeOptions(projectDirArg, options, configDefaults = {}) {
   const projectDir = path.resolve(
     projectDirArg ??
@@ -421,6 +517,12 @@ async function promptServeOptions(projectDirArg, options, configDefaults = {}) {
   return { projectDir, port, watch };
 }
 
+/**
+ * Prompts Keystore Options.
+ * @param {*} options
+ * @param {*} configDefaults
+ * @returns {Promise<Object>}
+ */
 async function promptKeystoreOptions(options, configDefaults = {}) {
   const keystorePath = path.resolve(
     options.path ??
@@ -481,6 +583,12 @@ async function promptKeystoreOptions(options, configDefaults = {}) {
   };
 }
 
+/**
+ * Prompts Test Options.
+ * @param {*} projectDirArg
+ * @param {*} configDefaults
+ * @returns {Promise<Object>}
+ */
 async function promptTestOptions(projectDirArg, configDefaults = {}) {
   return {
     projectDir: path.resolve(
@@ -491,6 +599,11 @@ async function promptTestOptions(projectDirArg, configDefaults = {}) {
   };
 }
 
+/**
+ * Prompts Analyze Options.
+ * @param {*} targetArg
+ * @returns {Promise<Object>}
+ */
 async function promptAnalyzeOptions(targetArg) {
   const target = path.resolve(
     targetArg ?? (await askRequired("Please enter the APK file path."))
@@ -498,6 +611,10 @@ async function promptAnalyzeOptions(targetArg) {
   return { target };
 }
 
+/**
+ * Mains a value.
+ * @returns {Promise<void>}
+ */
 async function main() {
   const projectConfig = await loadProjectConfig(process.cwd());
   const configDefaults = projectConfig.defaults || {};
@@ -613,7 +730,11 @@ async function main() {
 See 'japkgen --help' for usage information.`);
 }
 
-main().catch((error) => {
+main().catch(/**
+ * Functions a value.
+ * @param {*} error
+ */
+error => {
   logger.error(error?.message || String(error));
   process.exit(1);
 });

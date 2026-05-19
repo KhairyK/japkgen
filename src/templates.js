@@ -2,17 +2,29 @@ import path from "node:path";
 import { ANDROIDX, COMPOSE, DEFAULTS } from "./constants.js";
 import { parseList, uniq } from "./utils.js";
 
+/**
+ * Joins Lines.
+ * @param {*} lines
+ * @returns {*}
+ */
 function joinLines(lines = []) {
   return lines.filter(Boolean).join("\n");
 }
 
-function makeReadme({
-  appName,
-  templateTitle,
-  templateSummary,
-  templateNotes,
-  setupNotes = [],
-}) {
+/**
+ * Creates Readme.
+ * @param {Object} param
+ * @returns {string}
+ */
+function makeReadme(
+  {
+    appName,
+    templateTitle,
+    templateSummary,
+    templateNotes,
+    setupNotes = [],
+  }
+) {
   return `# ${appName}
 
 [![Generated with JAPKGEN](https://img.shields.io/badge/generated%20with-JAPKGEN-3DDC84?style=for-the-badge)](#)
@@ -31,16 +43,28 @@ ${templateSummary}
 ## Notes
 
 ${templateNotes}
-${setupNotes.length ? `\n## Setup\n\n${setupNotes.map((line) => `- ${line}`).join("\n")}\n` : ""}`;
+${setupNotes.length ? `\n## Setup\n\n${setupNotes.map(/**
+   * Functions a value.
+   * @param {*} line
+   * @returns {string}
+   */
+  line => `- ${line}`).join("\n")}\n` : ""}`;
 }
 
-function frameworkReadme({
-  appName,
-  frameworkName,
-  summary,
-  setupSteps,
-  notes,
-}) {
+/**
+ * Frameworks Readme.
+ * @param {Object} param
+ * @returns {string}
+ */
+function frameworkReadme(
+  {
+    appName,
+    frameworkName,
+    summary,
+    setupSteps,
+    notes,
+  }
+) {
   return `# ${appName}
 
 [![Generated with JAPKGEN](https://img.shields.io/badge/generated%20with-JAPKGEN-3DDC84?style=for-the-badge)](#)
@@ -57,7 +81,12 @@ ${summary}
 
 ## Setup
 
-${setupSteps.map((step) => `1. ${step}`).join("\n")}
+${setupSteps.map(/**
+   * Functions a value.
+   * @param {*} step
+   * @returns {string}
+   */
+  step => `1. ${step}`).join("\n")}
 
 ## Notes
 
@@ -65,6 +94,11 @@ ${notes}
 `;
 }
 
+/**
+ * Builds Root Build Gradle.
+ * @param {Object} param
+ * @returns {string}
+ */
 function buildRootBuildGradle({ includeCompose = false } = {}) {
   const plugins = [
     "    id 'com.android.application' version '__AGP_VERSION__' apply false",
@@ -83,6 +117,10 @@ ${plugins.join("\n")}
 `;
 }
 
+/**
+ * Builds Settings Gradle.
+ * @returns {string}
+ */
 function buildSettingsGradle() {
   return `pluginManagement {
     repositories {
@@ -105,6 +143,10 @@ include ':app'
 `;
 }
 
+/**
+ * Builds Gradle Properties.
+ * @returns {string}
+ */
 function buildGradleProperties() {
   return `org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
 android.useAndroidX=true
@@ -112,21 +154,38 @@ android.nonTransitiveRClass=true
 `;
 }
 
-function buildAppGradle({
-  dependencies,
-  appPlugins = [],
-  extraAndroidBlock = "",
-  buildFeaturesBlock = "",
-  composeBlock = "",
-  allowCleartextTraffic = true,
-}) {
+/**
+ * Builds App Gradle.
+ * @param {Object} param
+ * @returns {string}
+ */
+function buildAppGradle(
+  {
+    dependencies,
+    appPlugins = [],
+    extraAndroidBlock = "",
+    buildFeaturesBlock = "",
+    composeBlock = "",
+    allowCleartextTraffic = true,
+  }
+) {
   const plugins = [
     "    id 'com.android.application'",
-    ...appPlugins.map((line) => `    ${line}`),
+    ...appPlugins.map(/**
+     * Functions a value.
+     * @param {*} line
+     * @returns {string}
+     */
+    line => `    ${line}`),
   ].join("\n");
 
   const depLines = uniq(dependencies)
-    .map((d) => `    implementation '${d}'`)
+    .map(/**
+   * Functions a value.
+   * @param {*} d
+   * @returns {string}
+   */
+  d => `    implementation '${d}'`)
     .join("\n");
   const cleartextLine = allowCleartextTraffic
     ? '        android:usesCleartextTraffic="true"'
@@ -197,11 +256,18 @@ ${depLines}
 `;
 }
 
-function buildAndroidManifest({
-  themeName = "Theme.JAPKGEN",
-  allowCleartextTraffic = true,
-  permissions = "__PERMISSIONS__",
-} = {}) {
+/**
+ * Builds Android Manifest.
+ * @param {Object} param
+ * @returns {string}
+ */
+function buildAndroidManifest(
+  {
+    themeName = "Theme.JAPKGEN",
+    allowCleartextTraffic = true,
+    permissions = "__PERMISSIONS__",
+  } = {}
+) {
   const cleartextLine = allowCleartextTraffic
     ? '        android:usesCleartextTraffic="true"'
     : "";
@@ -227,6 +293,11 @@ ${permissions}
 `;
 }
 
+/**
+ * Builds Strings Xml.
+ * @param {*} appName
+ * @returns {string}
+ */
 function buildStringsXml(appName = "__APP_NAME__") {
   return `<resources>
     <string name="app_name">${appName}</string>
@@ -234,6 +305,12 @@ function buildStringsXml(appName = "__APP_NAME__") {
 `;
 }
 
+/**
+ * Builds Theme Xml.
+ * @param {*} themeName
+ * @param {*} parent
+ * @returns {string}
+ */
 function buildThemeXml(
   themeName = "Theme.JAPKGEN",
   parent = "Theme.AppCompat.DayNight.NoActionBar"
@@ -244,6 +321,11 @@ function buildThemeXml(
 `;
 }
 
+/**
+ * Builds Compose Theme Xml.
+ * @param {*} themeName
+ * @returns {string}
+ */
 function buildComposeThemeXml(themeName = "Theme.JAPKGEN") {
   return `<resources>
     <style name="${themeName}" parent="Theme.Material3.DayNight.NoActionBar" />
@@ -251,6 +333,11 @@ function buildComposeThemeXml(themeName = "Theme.JAPKGEN") {
 `;
 }
 
+/**
+ * Builds Asset Shell.
+ * @param {Object} param
+ * @returns {string}
+ */
 function buildAssetShell({ title, appName, subtitle }) {
   return `<!doctype html>
 <html lang="en">
@@ -298,6 +385,10 @@ function buildAssetShell({ title, appName, subtitle }) {
 `;
 }
 
+/**
+ * Builds Tailwind Config.
+ * @returns {string}
+ */
 function buildTailwindConfig() {
   return `module.exports = {
   content: [
@@ -317,6 +408,10 @@ function buildTailwindConfig() {
 `;
 }
 
+/**
+ * Builds Postcss Config.
+ * @returns {string}
+ */
 function buildPostcssConfig() {
   return `module.exports = {
   plugins: {
@@ -327,6 +422,10 @@ function buildPostcssConfig() {
 `;
 }
 
+/**
+ * Builds Xml2 Json Helper.
+ * @returns {string}
+ */
 function buildXml2JsonHelper() {
   return `function normalizeValue(value) {
   const trimmed = String(value ?? '').trim();
@@ -400,6 +499,10 @@ export function prettyXmlJson(xmlString = '') {
 `;
 }
 
+/**
+ * Builds Web Styles.
+ * @returns {string}
+ */
 function buildWebStyles() {
   return `@tailwind base;
 @tailwind components;
@@ -464,16 +567,27 @@ body {
 `;
 }
 
+/**
+ * Builds Material Icon Link.
+ * @returns {string}
+ */
 function buildMaterialIconLink() {
   return `  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />\n`;
 }
 
-function buildVitePackageJson({
-  name,
-  framework,
-  dependencies,
-  devDependencies,
-}) {
+/**
+ * Builds Vite Package Json.
+ * @param {Object} param
+ * @returns {number}
+ */
+function buildVitePackageJson(
+  {
+    name,
+    framework,
+    dependencies,
+    devDependencies,
+  }
+) {
   return (
     JSON.stringify(
       {
@@ -494,6 +608,11 @@ function buildVitePackageJson({
   );
 }
 
+/**
+ * Builds Vite Config.
+ * @param {Object} param
+ * @returns {string}
+ */
 function buildViteConfig({ framework, outDir = "../app/src/main/assets/www" }) {
   if (framework === "react") {
     const runtimePlugins = parseList(
@@ -501,11 +620,23 @@ function buildViteConfig({ framework, outDir = "../app/src/main/assets/www" }) {
     );
     const extraImports = runtimePlugins.length
       ? `${runtimePlugins
-          .map((pkg, index) => `import plugin${index} from '${pkg}';`)
+          .map(/**
+     * Functions a value.
+     * @param {*} pkg
+     * @param {*} index
+     * @returns {string}
+     */
+    (pkg, index) => `import plugin${index} from '${pkg}';`)
           .join("\n")}\n`
       : "";
     const extraPluginEntries = runtimePlugins.length
-      ? `, ${runtimePlugins.map((_, index) => `plugin${index}()`).join(", ")}`
+      ? `, ${runtimePlugins.map(/**
+     * Functions a value.
+     * @param {*} _
+     * @param {*} index
+     * @returns {string}
+     */
+    (_, index) => `plugin${index}()`).join(", ")}`
       : "";
 
     return `import { defineConfig } from 'vite';
@@ -594,6 +725,11 @@ export default defineConfig({
 `;
 }
 
+/**
+ * Builds Web Activity.
+ * @param {Object} param
+ * @returns {string}
+ */
 function buildWebActivity({ homeUrl, allowCleartextTraffic = true }) {
   return `package __PACKAGE__;
 
@@ -704,24 +840,31 @@ public class MainActivity extends AppCompatActivity {
 `;
 }
 
-function baseCommonFiles({
-  dependencies,
-  layoutXml,
-  activitySource,
-  sourcePath = "app/src/main/java/__PACKAGE_PATH__/MainActivity.java",
-  extraAndroidBlock = "",
-  extraFiles = {},
-  readme,
-  themeName = "Theme.JAPKGEN",
-  appPlugins = [],
-  appDependencies = [],
-  allowCleartextTraffic = true,
-  rootBuildGradle = null,
-  appBuildGradle = null,
-  rootIncludeCompose = false,
-  buildFeaturesBlock = "",
-  composeBlock = "",
-}) {
+/**
+ * Bases Common Files.
+ * @param {Object} param
+ * @returns {Object}
+ */
+function baseCommonFiles(
+  {
+    dependencies,
+    layoutXml,
+    activitySource,
+    sourcePath = "app/src/main/java/__PACKAGE_PATH__/MainActivity.java",
+    extraAndroidBlock = "",
+    extraFiles = {},
+    readme,
+    themeName = "Theme.JAPKGEN",
+    appPlugins = [],
+    appDependencies = [],
+    allowCleartextTraffic = true,
+    rootBuildGradle = null,
+    appBuildGradle = null,
+    rootIncludeCompose = false,
+    buildFeaturesBlock = "",
+    composeBlock = "",
+  }
+) {
   const allDependencies = uniq([...dependencies, ...appDependencies]);
 
   return {
@@ -753,18 +896,25 @@ function baseCommonFiles({
   };
 }
 
-function webTemplate({
-  title,
-  framework,
-  appName = "__APP_NAME__",
-  summary,
-  notes,
-  dependencies,
-  packageJson,
-  extraSourceFiles,
-  mainSource,
-  appPlugins = [],
-}) {
+/**
+ * Webs Template.
+ * @param {Object} param
+ * @returns {Object}
+ */
+function webTemplate(
+  {
+    title,
+    framework,
+    appName = "__APP_NAME__",
+    summary,
+    notes,
+    dependencies,
+    packageJson,
+    extraSourceFiles,
+    mainSource,
+    appPlugins = [],
+  }
+) {
   const commonDeps = [
     ANDROIDX.appcompat,
     ANDROIDX.core,
@@ -855,6 +1005,10 @@ ${buildMaterialIconLink()}  <title>${appName}</title>
   };
 }
 
+/**
+ * Reacts Template.
+ * @returns {*}
+ */
 function reactTemplate() {
   const packageJson = buildVitePackageJson({
     name: "__PACKAGE_PATH__-react",
@@ -977,6 +1131,10 @@ export default function App() {
   });
 }
 
+/**
+ * Vues Template.
+ * @returns {*}
+ */
 function vueTemplate() {
   const packageJson = buildVitePackageJson({
     name: "__PACKAGE_PATH__-vue",
@@ -1063,6 +1221,10 @@ p { margin: 0; line-height: 1.7; color: #cbd5e1; }
   });
 }
 
+/**
+ * Preacts Template.
+ * @returns {*}
+ */
 function preactTemplate() {
   const packageJson = buildVitePackageJson({
     name: "__PACKAGE_PATH__-preact",
@@ -1149,6 +1311,10 @@ p { margin: 0; line-height: 1.7; color: #cbd5e1; }
   });
 }
 
+/**
+ * Angulars Template.
+ * @returns {*}
+ */
 function angularTemplate() {
   const packageJson =
     JSON.stringify(
@@ -1296,6 +1462,10 @@ p { margin: 0; line-height: 1.7; color: #cbd5e1; }
   });
 }
 
+/**
+ * Natives Template.
+ * @returns {Object}
+ */
 function nativeTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
   const readme = makeReadme({
@@ -1346,6 +1516,10 @@ public class MainActivity extends AppCompatActivity {
   };
 }
 
+/**
+ * Kotlins Template.
+ * @returns {Object}
+ */
 function kotlinTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.coreKtx];
   const readme = makeReadme({
@@ -1401,6 +1575,10 @@ class MainActivity : AppCompatActivity() {
   };
 }
 
+/**
+ * Composes Template.
+ * @returns {Object}
+ */
 function composeTemplate() {
   const dependencies = [
     ANDROIDX.activityCompose,
@@ -1555,6 +1733,10 @@ private fun ComposeApp() {
   };
 }
 
+/**
+ * Games Java Template.
+ * @returns {Object}
+ */
 function gameJavaTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
   const readme = makeReadme({
@@ -1723,6 +1905,10 @@ public class GameView extends SurfaceView implements Runnable, SurfaceHolder.Cal
   };
 }
 
+/**
+ * Games Cpp Template.
+ * @returns {Object}
+ */
 function gameCppTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
 
@@ -2331,6 +2517,13 @@ Java___PACKAGE_JNI___MainActivity_nativeGetScore(JNIEnv*, jobject) {
   };
 }
 
+/**
+ * Natives CCommon Readme.
+ * @param {*} title
+ * @param {*} summary
+ * @param {*} notes
+ * @returns {*}
+ */
 function nativeCCommonReadme(title, summary, notes) {
   return makeReadme({
     appName: "__APP_NAME__",
@@ -2345,6 +2538,11 @@ function nativeCCommonReadme(title, summary, notes) {
   });
 }
 
+/**
+ * Natives CActivity.
+ * @param {*} bodyLabel
+ * @returns {string}
+ */
 function nativeCActivity(bodyLabel = "Hello from native C!") {
   return `package __PACKAGE__;
 
@@ -2381,6 +2579,10 @@ public class MainActivity extends AppCompatActivity {
 }
 
 
+/**
+ * Toyboxs Template.
+ * @returns {Object}
+ */
 function toyboxTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
   const readme = buildToolboxReadme({
@@ -2449,6 +2651,10 @@ public class MainActivity extends AppCompatActivity {
   };
 }
 
+/**
+ * Nextboxs Template.
+ * @returns {Object}
+ */
 function nextboxTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.coreKtx];
   const readme = buildToolboxReadme({
@@ -2517,6 +2723,10 @@ class MainActivity : AppCompatActivity() {
   };
 }
 
+/**
+ * Bedboxs Template.
+ * @returns {Object}
+ */
 function bedboxTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.core, ANDROIDX.swipeRefresh, ANDROIDX.webkit];
   const readme = frameworkReadme({
@@ -2654,6 +2864,10 @@ document.querySelector('#app').innerHTML = ` + "`" + `
   };
 }
 
+/**
+ * Solidjss Template.
+ * @returns {*}
+ */
 function solidjsTemplate() {
   const packageJson = buildVitePackageJson({
     name: '__PACKAGE_PATH__-solidjs',
@@ -2702,6 +2916,10 @@ render(() => <App />, document.getElementById('app'));
 }
 
 
+/**
+ * Cs Template.
+ * @returns {Object}
+ */
 function cTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
   const readme = nativeCCommonReadme(
@@ -2825,6 +3043,10 @@ clean:
   };
 }
 
+/**
+ * Cpps Template.
+ * @returns {Object}
+ */
 function cppTemplate() {
   const dependencies = [ANDROIDX.appcompat, ANDROIDX.core];
   const readme = nativeCCommonReadme(
@@ -2953,15 +3175,29 @@ clean:
 }
 
 
+/**
+ * Runtimes Options.
+ * @returns {*}
+ */
 function runtimeOptions() {
   return globalThis.__JAPKGEN_RUNTIME__?.options || {};
 }
 
+/**
+ * Lists Option.
+ * @param {*} value
+ * @returns {*}
+ */
 function listOption(value) {
   return parseList(Array.isArray(value) ? value : String(value || ""));
 }
 
 
+/**
+ * Builds Utility Conversion Script.
+ * @param {Object} param
+ * @returns {string}
+ */
 function buildUtilityConversionScript({ framework = "web" } = {}) {
   return `#!/usr/bin/env node
 import fs from 'node:fs/promises';
@@ -3052,6 +3288,11 @@ console.log('Conversion finished for ${framework}.');
 `;
 }
 
+/**
+ * Builds Toolbox Readme.
+ * @param {Object} param
+ * @returns {string}
+ */
 function buildToolboxReadme({ title, summary, bullets }) {
   return `# ${title}
 
@@ -3059,10 +3300,20 @@ ${summary}
 
 ## Included
 
-${bullets.map((item) => `- ${item}`).join('\n')}
+${bullets.map(/**
+   * Functions a value.
+   * @param {*} item
+   * @returns {string}
+   */
+  item => `- ${item}`).join('\n')}
 `;
 }
 
+/**
+ * Builds Solid App.
+ * @param {Object} param
+ * @returns {number}
+ */
 function buildSolidApp({ appName }) {
   return `import { createMemo } from 'solid-js';
 import { prettyXmlJson } from './xml2json';
@@ -3086,6 +3337,10 @@ export default function App() {
 `;
 }
 
+/**
+ * Builds Media Tooling Files.
+ * @returns {Object}
+ */
 function buildMediaToolingFiles() {
   return {
     'frontend/tools/convert-assets.mjs': buildUtilityConversionScript({ framework: 'web' }),
@@ -3093,17 +3348,37 @@ function buildMediaToolingFiles() {
   };
 }
 
+/**
+ * Builds React Plugin File.
+ * @returns {string}
+ */
 function buildReactPluginFile() {
   const plugins = listOption(runtimeOptions().reactPlugins);
   if (!plugins.length) {
     return `export const reactPlugins = [];\n`;
   }
 
-  const imports = plugins.map((pkg, index) => `import plugin${index} from '${pkg}';`).join('\n');
-  const entries = plugins.map((_, index) => `plugin${index}()`).join(', ');
+  const imports = plugins.map(/**
+   * Functions a value.
+   * @param {*} pkg
+   * @param {*} index
+   * @returns {string}
+   */
+  (pkg, index) => `import plugin${index} from '${pkg}';`).join('\n');
+  const entries = plugins.map(/**
+   * Functions a value.
+   * @param {*} _
+   * @param {*} index
+   * @returns {string}
+   */
+  (_, index) => `plugin${index}()`).join(', ');
   return `${imports}\n\nexport const reactPlugins = [${entries}];\n`;
 }
 const BUILTIN_TEMPLATES = {
+  /**
+   * Webviews a value.
+   * @returns {Object}
+   */
   webview: () => {
     const dependencies = [
       ANDROIDX.appcompat,
@@ -3156,6 +3431,10 @@ const BUILTIN_TEMPLATES = {
       }),
     };
   },
+  /**
+   * Pwas a value.
+   * @returns {Object}
+   */
   pwa: () => {
     const dependencies = [
       ANDROIDX.appcompat,
@@ -3341,6 +3620,12 @@ public class MainActivity extends AppCompatActivity {
   "game-cpp": gameCppTemplate,
 };
 
+/**
+ * Gets Template.
+ * @param {*} templateName
+ * @param {*} registry
+ * @returns {*}
+ */
 export function getTemplate(templateName, registry = BUILTIN_TEMPLATES) {
   const key = String(templateName).toLowerCase();
   const templateFactory = registry[key];
@@ -3350,6 +3635,11 @@ export function getTemplate(templateName, registry = BUILTIN_TEMPLATES) {
   return template || null;
 }
 
+/**
+ * Templates Names.
+ * @param {*} registry
+ * @returns {*}
+ */
 export function templateNames(registry = BUILTIN_TEMPLATES) {
   return Object.keys(registry).sort();
 }

@@ -7,6 +7,12 @@ import {
   getDefaultAndroidSdkPaths,
 } from "./utils.js";
 
+/**
+ * Runs Version Check.
+ * @param {*} command
+ * @param {*} args
+ * @returns {Promise<Object>}
+ */
 async function runVersionCheck(command, args) {
   try {
     const ok = await detectCommand(command, args);
@@ -25,6 +31,10 @@ async function runVersionCheck(command, args) {
   }
 }
 
+/**
+ * Detects Environment.
+ * @returns {Promise<*>}
+ */
 export async function detectEnvironment() {
   const sdkRootCandidate =
     process.env.ANDROID_SDK_ROOT ||

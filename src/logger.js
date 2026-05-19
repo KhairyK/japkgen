@@ -8,22 +8,51 @@ const BLUE = "\x1b[34m";
 const MAGENTA = "\x1b[35m";
 const CYAN = "\x1b[36m";
 
+/**
+ * Colors a value.
+ * @param {*} code
+ * @param {*} text
+ * @returns {string}
+ */
 function color(code, text) {
   return `${code}${text}${RESET}`;
 }
 
+/**
+ * Strips Ansi.
+ * @param {*} input
+ * @returns {*}
+ */
 function stripAnsi(input) {
   return String(input).replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, "");
 }
 
+/**
+ * Pads Visible.
+ * @param {*} text
+ * @param {*} width
+ * @returns {number}
+ */
 function padVisible(text, width) {
   return width - stripAnsi(text).length;
 }
 
+/**
+ * Lines a value.
+ * @param {*} char
+ * @param {*} width
+ * @returns {*}
+ */
 function line(char = "─", width = 72) {
   return char.repeat(width);
 }
 
+/**
+ * Blocks a value.
+ * @param {*} title
+ * @param {*} details
+ * @returns {*}
+ */
 function block(title, details = []) {
   const width = 72;
   const titleLine = ` ${title} `;
@@ -39,36 +68,82 @@ function block(title, details = []) {
 }
 
 export const logger = {
+  /**
+   * Titles a value.
+   * @param {*} text
+   */
   title(text) {
     console.log(color(BOLD + CYAN, `\n◆ ${text}`));
   },
+  /**
+   * Sections a value.
+   * @param {*} text
+   */
   section(text) {
     console.log(color(BOLD + BLUE, `\n▶ ${text}`));
   },
+  /**
+   * Infos a value.
+   * @param {*} text
+   */
   info(text) {
     console.log(color(CYAN, `ℹ ${text}`));
   },
+  /**
+   * Successs a value.
+   * @param {*} text
+   */
   success(text) {
     console.log(color(GREEN, `✔ ${text}`));
   },
+  /**
+   * Warns a value.
+   * @param {*} text
+   */
   warn(text) {
     console.log(color(YELLOW, `⚠ ${text}`));
   },
+  /**
+   * Errors a value.
+   * @param {*} text
+   */
   error(text) {
     console.error(color(RED, `✖ ${text}`));
   },
+  /**
+   * Dims a value.
+   * @param {*} text
+   */
   dim(text) {
     console.log(color(DIM, text));
   },
+  /**
+   * Bullets a value.
+   * @param {*} label
+   * @param {*} value
+   */
   bullet(label, value) {
     console.log(`${color(MAGENTA, "•")} ${label}: ${value}`);
   },
+  /**
+   * Plains a value.
+   * @param {*} text
+   */
   plain(text = "") {
     console.log(text);
   },
+  /**
+   * Notes a value.
+   * @param {*} text
+   */
   note(text) {
     console.log(color(DIM, `  ${text}`));
   },
+  /**
+   * Boxs a value.
+   * @param {*} title
+   * @param {*} details
+   */
   box(title, details = []) {
     console.log(block(title, details));
   },

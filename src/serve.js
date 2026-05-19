@@ -21,10 +21,20 @@ const MIME = {
   ".txt": "text/plain; charset=utf-8",
 };
 
+/**
+ * Mimes For.
+ * @param {*} filePath
+ * @returns {*}
+ */
 function mimeFor(filePath) {
   return MIME[extname(filePath).toLowerCase()] || "application/octet-stream";
 }
 
+/**
+ * Reads Index File.
+ * @param {*} rootDir
+ * @returns {Promise<*>}
+ */
 async function readIndexFile(rootDir) {
   const candidates = [
     path.join(rootDir, "index.html"),
@@ -37,6 +47,12 @@ async function readIndexFile(rootDir) {
   return null;
 }
 
+/**
+ * Injects Live Reload.
+ * @param {*} html
+ * @param {*} clientPath
+ * @returns {*}
+ */
 function injectLiveReload(html, clientPath = "/__japkgen_live_reload.js") {
   if (html.includes(clientPath)) return html;
   return html.replace(
@@ -45,10 +61,13 @@ function injectLiveReload(html, clientPath = "/__japkgen_live_reload.js") {
   );
 }
 
-export async function serveProject(
-  projectDirArg = process.cwd(),
-  { port = 4173, watch = true } = {}
-) {
+/**
+ * Serves Project.
+ * @param {*} projectDirArg
+ * @param {Object} param
+ * @returns {Promise<Object>}
+ */
+export async function serveProject(projectDirArg = process.cwd(), { port = 4173, watch = true } = {}) {
   const projectDir = path.resolve(projectDirArg);
   let rootDir = projectDir;
   const preferredIndex = await readIndexFile(projectDir);
@@ -57,7 +76,13 @@ export async function serveProject(
   const clients = new Set();
   let version = 0;
 
-  const server = http.createServer(async (req, res) => {
+  const server = http.createServer(/**
+   * Functions a value.
+   * @param {*} req
+   * @param {*} res
+   * @returns {Promise<void>}
+   */
+  async (req, res) => {
     const url = new URL(req.url || "/", "http://localhost");
     if (url.pathname === "/__japkgen_events") {
       res.writeHead(200, {
@@ -68,7 +93,11 @@ export async function serveProject(
       });
       res.write(`event: hello\ndata: ready\n\n`);
       clients.add(res);
-      req.on("close", () => clients.delete(res));
+      req.on("close", /**
+       * Functions a value.
+       * @returns {*}
+       */
+      () => clients.delete(res));
       return;
     }
 
@@ -110,7 +139,12 @@ export async function serveProject(
     }
   });
 
-  await new Promise((resolve) => server.listen(port, resolve));
+  await new Promise(/**
+   * Functions a value.
+   * @param {*} resolve
+   * @returns {*}
+   */
+  resolve => server.listen(port, resolve));
   logger.title("JAPKGEN Serve");
   logger.success(`Server aktif di http://localhost:${port}`);
   logger.info(`Serving: ${rootDir}`);
@@ -119,7 +153,10 @@ export async function serveProject(
   let watcher = null;
   if (watch) {
     try {
-      watcher = await fs.watch(projectDir, { recursive: true }, () => {
+      watcher = await fs.watch(projectDir, { recursive: true }, /**
+       * Functions a value.
+       */
+      () => {
         version++;
         for (const res of clients) {
           res.write(`event: reload\ndata: ${version}\n\n`);
@@ -135,6 +172,10 @@ export async function serveProject(
   }
 
   return {
+    /**
+     * Closes a value.
+     * @returns {Promise<void>}
+     */
     close: async () => {
       watcher?.close?.();
       for (const res of clients) {
@@ -142,7 +183,12 @@ export async function serveProject(
           res.end();
         } catch {}
       }
-      await new Promise((resolve) => server.close(resolve));
+      await new Promise(/**
+       * Functions a value.
+       * @param {*} resolve
+       * @returns {*}
+       */
+      resolve => server.close(resolve));
     },
     server,
     rootDir,

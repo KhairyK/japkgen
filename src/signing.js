@@ -3,6 +3,11 @@ import { writeFileEnsured, runCommand } from "./utils.js";
 import { logger } from "./logger.js";
 import { DEFAULTS } from "./constants.js";
 
+/**
+ * Sanitizes Alias.
+ * @param {*} input
+ * @returns {*}
+ */
 export function sanitizeAlias(input = "") {
   return (
     String(input)
@@ -12,6 +17,12 @@ export function sanitizeAlias(input = "") {
   );
 }
 
+/**
+ * Writes Signing Files.
+ * @param {*} projectDir
+ * @param {*} signing
+ * @returns {Promise<*>}
+ */
 export async function writeSigningFiles(projectDir, signing) {
   if (!signing?.signingEnabled) return null;
 
@@ -28,14 +39,21 @@ export async function writeSigningFiles(projectDir, signing) {
   return path.join(projectDir, "keystore.properties");
 }
 
-export async function createKeystore({
-  keystorePath,
-  alias,
-  storePassword,
-  keyPassword,
-  dname,
-  validityDays = 10000,
-}) {
+/**
+ * Creates Keystore.
+ * @param {Object} param
+ * @returns {Promise<Object>}
+ */
+export async function createKeystore(
+  {
+    keystorePath,
+    alias,
+    storePassword,
+    keyPassword,
+    dname,
+    validityDays = 10000,
+  }
+) {
   const resolved = path.resolve(keystorePath);
   const args = [
     "-genkeypair",

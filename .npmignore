@@ -4,7 +4,10 @@ node_modules/
 .gitignore
 tmp/
 web/
-**/*.log
+logs/
 examples/
 .prettierignore
 .prettierrc
+test/
+eslint.config.js
+packages/

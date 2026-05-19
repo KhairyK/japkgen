@@ -1,0 +1,20 @@
+{
+  "name": "docifyjs",
+  "version": "0.1.0",
+  "description": "A JSDoc generator with Recast, Commander, Ora, and Picocolors.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "docify": "./bin/docify.js"
+  },
+  "scripts": {
+    "test": "node test/run-tests.js"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.28.5",
+    "commander": "^14.0.0",
+    "ora": "^9.0.0",
+    "picocolors": "^1.1.1",
+    "recast": "^0.23.11"
+  }
+}

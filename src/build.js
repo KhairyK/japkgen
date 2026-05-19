@@ -9,6 +9,11 @@ import {
   writeFileEnsured,
 } from "./utils.js";
 
+/**
+ * Ensures Local Properties.
+ * @param {*} projectDir
+ * @returns {Promise<boolean>}
+ */
 async function ensureLocalProperties(projectDir) {
   const androidSdkRoot =
     process.env.ANDROID_SDK_ROOT || process.env.ANDROID_HOME;
@@ -19,6 +24,12 @@ async function ensureLocalProperties(projectDir) {
   return true;
 }
 
+/**
+ * Bootstraps Gradle Wrapper.
+ * @param {*} projectDir
+ * @param {*} gradleVersion
+ * @returns {Promise<boolean>}
+ */
 async function bootstrapGradleWrapper(projectDir, gradleVersion) {
   if (await templateExists(projectDir)) return true;
   const gradleExists = await runCommand(
@@ -51,6 +62,12 @@ async function bootstrapGradleWrapper(projectDir, gradleVersion) {
   return true;
 }
 
+/**
+ * Builds Project.
+ * @param {*} projectDirArg
+ * @param {*} buildOptions
+ * @returns {Promise<Object>}
+ */
 export async function buildProject(projectDirArg, buildOptions = {}) {
   const projectDir = path.resolve(projectDirArg || process.cwd());
   const variant = String(

@@ -2,6 +2,11 @@ import path from "node:path";
 import { listZipEntriesWithUnzip, humanBytes, fileExists } from "./utils.js";
 import { logger } from "./logger.js";
 
+/**
+ * Parses Entry Line.
+ * @param {*} line
+ * @returns {*}
+ */
 function parseEntryLine(line) {
   const trimmed = String(line).trim();
   if (!trimmed) return null;
@@ -19,6 +24,11 @@ function parseEntryLine(line) {
   return null;
 }
 
+/**
+ * Parses Entry List.
+ * @param {*} output
+ * @returns {*}
+ */
 function parseEntryList(output) {
   const entries = [];
   for (const line of String(output).split(/\r?\n/)) {
@@ -29,8 +39,19 @@ function parseEntryList(output) {
   return entries;
 }
 
+/**
+ * Summarizes a value.
+ * @param {*} entries
+ * @returns {Object}
+ */
 function summarize(entries) {
-  const total = entries.reduce((sum, e) => sum + e.size, 0);
+  const total = entries.reduce(/**
+   * Functions a value.
+   * @param {*} sum
+   * @param {*} e
+   * @returns {number}
+   */
+  (sum, e) => sum + e.size, 0);
   const count = entries.length;
   const extMap = new Map();
 
@@ -39,20 +60,45 @@ function summarize(entries) {
     extMap.set(ext, (extMap.get(ext) || 0) + e.size);
   }
 
-  const top = [...entries].sort((a, b) => b.size - a.size).slice(0, 8);
+  const top = [...entries].sort(/**
+   * Functions a value.
+   * @param {*} a
+   * @param {*} b
+   * @returns {number}
+   */
+  (a, b) => b.size - a.size).slice(0, 8);
   const hasManifest = entries.some(
-    (e) =>
-      e.name === "AndroidManifest.xml" ||
-      e.name.endsWith("/AndroidManifest.xml")
+    /**
+     * Functions a value.
+     * @param {*} e
+     * @returns {*}
+     */
+    e => e.name === "AndroidManifest.xml" ||
+    e.name.endsWith("/AndroidManifest.xml")
   );
-  const dexCount = entries.filter((e) => e.name.endsWith(".dex")).length;
+  const dexCount = entries.filter(/**
+   * Functions a value.
+   * @param {*} e
+   * @returns {*}
+   */
+  e => e.name.endsWith(".dex")).length;
   const nativeLibCount = entries.filter(
-    (e) => e.name.startsWith("lib/") && e.name.endsWith(".so")
+    /**
+     * Functions a value.
+     * @param {*} e
+     * @returns {*}
+     */
+    e => e.name.startsWith("lib/") && e.name.endsWith(".so")
   ).length;
 
   return { total, count, extMap, top, hasManifest, dexCount, nativeLibCount };
 }
 
+/**
+ * Analyzes Apk.
+ * @param {*} apkPath
+ * @returns {Promise<Object>}
+ */
 export async function analyzeApk(apkPath) {
   const resolved = path.resolve(apkPath);
   if (!(await fileExists(resolved))) {
@@ -81,7 +127,13 @@ export async function analyzeApk(apkPath) {
 
   logger.section("Size by extension");
   const sortedExt = [...summary.extMap.entries()]
-    .sort((a, b) => b[1] - a[1])
+    .sort(/**
+   * Functions a value.
+   * @param {*} a
+   * @param {*} b
+   * @returns {number}
+   */
+  (a, b) => b[1] - a[1])
     .slice(0, 10);
   for (const [ext, size] of sortedExt) {
     logger.bullet(ext, humanBytes(size));

@@ -25,6 +25,12 @@ import { writeSigningFiles } from "./signing.js";
 import { loadPlugins, runHooks } from "./plugins.js";
 import { debugLog } from "./debug.js";
 
+/**
+ * Prompts Text.
+ * @param {*} message
+ * @param {*} initial
+ * @returns {Promise<*>}
+ */
 async function promptText(message, initial = "") {
   const { createInterface } = await import("node:readline/promises");
   const r = createInterface({ input: process.stdin, output: process.stdout });
@@ -38,6 +44,12 @@ async function promptText(message, initial = "") {
   }
 }
 
+/**
+ * Prompts Yes No.
+ * @param {*} message
+ * @param {*} initial
+ * @returns {Promise<*>}
+ */
 async function promptYesNo(message, initial = false) {
   const { createInterface } = await import("node:readline/promises");
   const r = createInterface({ input: process.stdin, output: process.stdout });
@@ -57,16 +69,36 @@ async function promptYesNo(message, initial = false) {
   }
 }
 
+/**
+ * Normalizes Template Name.
+ * @param {*} name
+ * @returns {*}
+ */
 function normalizeTemplateName(name) {
   return String(name || "")
     .trim()
     .toLowerCase();
 }
 
+/**
+ * Merges Strings.
+ * @param {*} ...values
+ * @returns {*}
+ */
 function mergeStrings(...values) {
-  return uniq(values.flatMap((value) => parseList(value)));
+  return uniq(values.flatMap(/**
+   * Functions a value.
+   * @param {*} value
+   * @returns {*}
+   */
+  value => parseList(value)));
 }
 
+/**
+ * Smarts Permissions.
+ * @param {Object} param
+ * @returns {*}
+ */
 function smartPermissions({ templateName, url, permissions }) {
   const list = parsePermissions(permissions);
 
@@ -88,6 +120,13 @@ function smartPermissions({ templateName, url, permissions }) {
   return uniq(list);
 }
 
+/**
+ * Writes Template Project.
+ * @param {*} projectDir
+ * @param {*} template
+ * @param {*} vars
+ * @returns {Promise<void>}
+ */
 async function writeTemplateProject(projectDir, template, vars) {
   for (const [rawRelativePath, rawContent] of Object.entries(
     template.files || {}
@@ -99,11 +138,22 @@ async function writeTemplateProject(projectDir, template, vars) {
   }
 }
 
+/**
+ * Resolves Project Dir.
+ * @param {*} name
+ * @returns {Promise<*>}
+ */
 async function resolveProjectDir(name) {
   const safeName = String(name).trim() || DEFAULTS.appName;
   return path.resolve(process.cwd(), safeName);
 }
 
+/**
+ * Merges Config Defaults.
+ * @param {*} configDefaults
+ * @param {*} cliOptions
+ * @returns {Object}
+ */
 function mergeConfigDefaults(configDefaults = {}, cliOptions = {}) {
   const defaults = configDefaults || {};
 
@@ -200,15 +250,32 @@ function mergeConfigDefaults(configDefaults = {}, cliOptions = {}) {
   };
 }
 
+/**
+ * Resolves Template Registry.
+ * @param {*} pluginTemplates
+ * @param {*} configTemplates
+ * @returns {Object}
+ */
 function resolveTemplateRegistry(pluginTemplates = {}, configTemplates = {}) {
   return { ...BUILTIN_TEMPLATES, ...configTemplates, ...pluginTemplates };
 }
 
+/**
+ * Gets Resolved Template.
+ * @param {*} templateName
+ * @param {*} registry
+ * @returns {Promise<Object>}
+ */
 async function getResolvedTemplate(templateName, registry = {}) {
   const template = getTemplate(templateName, registry);
   return template ? { template, registry } : { template: null, registry };
 }
 
+/**
+ * Generates Project.
+ * @param {*} cliOptions
+ * @returns {Promise<Object>}
+ */
 export async function generateProject(cliOptions = {}) {
   const projectConfig = await loadProjectConfig(process.cwd());
   debugLog(
@@ -297,7 +364,12 @@ export async function generateProject(cliOptions = {}) {
 
   const permissionsXml = permissions.length
     ? permissions
-        .map((p) => `    <uses-permission android:name="${p}" />`)
+        .map(/**
+   * Functions a value.
+   * @param {*} p
+   * @returns {string}
+   */
+  p => `    <uses-permission android:name="${p}" />`)
         .join("\n")
     : "";
 

@@ -17,31 +17,18 @@ export default defineConfig({
     port: 4173
   },
 
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src')
-    }
-  },
-
   css: {
     devSourcemap: !isProd
   },
 
   build: {
     target: 'esnext',
-
     outDir: 'dist',
-
     assetsDir: 'assets',
-
     sourcemap: !isProd,
-
     minify: isProd ? 'esbuild' : false,
-
     cssMinify: isProd,
-
     chunkSizeWarningLimit: 1000,
-
     reportCompressedSize: false,
 
     rollupOptions: {
@@ -53,9 +40,7 @@ export default defineConfig({
         },
 
         entryFileNames: 'assets/[name]-[hash].js',
-
         chunkFileNames: 'assets/[name]-[hash].js',
-
         assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     }

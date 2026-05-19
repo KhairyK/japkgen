@@ -1,6 +1,6 @@
 {
   "name": "japkgen",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Modern Android app generator and APK builder CLI with smart templates and optimized tooling.",
   "keywords": [
     "javac",
@@ -73,6 +73,7 @@
   "engines": {
     "node": "^18 || ^20 || ^22 || ^24 || ^26"
   },
+  "engineStrict": true,
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
@@ -82,7 +83,8 @@
     "format": "npx prettier . --write",
     "lint": "npx eslint .",
     "lint:init": "npx eslint --init",
-    "clean": "rm -rf node_modules package-lock.json logs"
+    "clean": "rm -rf node_modules package-lock.json logs/*.log",
+    "dev": "npm link && japkgen"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

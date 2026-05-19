@@ -3,10 +3,19 @@ import { detectEnvironment } from "./environment.js";
 import { logger } from "./logger.js";
 import { fileExists } from "./utils.js";
 
+/**
+ * Ticks a value.
+ * @param {*} ok
+ * @returns {string}
+ */
 function tick(ok) {
   return ok ? "✔" : "✖";
 }
 
+/**
+ * Runs Doctor.
+ * @returns {Promise<*>}
+ */
 export async function runDoctor() {
   const env = await detectEnvironment();
 
