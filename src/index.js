@@ -17,11 +17,54 @@ import { analyzeApk } from "./analyze.js";
 import { runDependencyManager } from "./dependency-manager.js";
 import { normalizeBoolean } from "./utils.js";
 
-const VERSION = "2.1.1";
+const VERSION = "2.2.0";
 const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY);
 const YEAR = new Date().getFullYear();
 
 const TEMPLATES = [...SUPPORTED_TEMPLATES];
+const TEMPLATE_GROUPS = [
+  {
+    title: 'Web APK',
+    value: 'web',
+    templates: ['webview', 'pwa', 'bedbox'],
+  },
+  {
+    title: 'Frontend frameworks',
+    value: 'frontend',
+    templates: ['react', 'solidjs', 'vue', 'angular', 'preact'],
+  },
+  {
+    title: 'Android utilities',
+    value: 'utility',
+    templates: ['toybox', 'nextbox'],
+  },
+  {
+    title: 'Android UI starters',
+    value: 'ui',
+    templates: ['native', 'compose', 'kotlin'],
+  },
+  {
+    title: 'Native and game starters',
+    value: 'native',
+    templates: ['c', 'cpp', 'cmake', 'make', 'game-java', 'game-cpp'],
+  },
+  {
+    title: 'Cross-platform mobile',
+    value: 'cross',
+    templates: ['react-native', 'flutter'],
+  },
+];
+
+let clackPromptsModule = null;
+async function loadCliPrompts() {
+  if (clackPromptsModule !== null) return clackPromptsModule;
+  try {
+    clackPromptsModule = await import('@clack/prompts');
+  } catch {
+    clackPromptsModule = null;
+  }
+  return clackPromptsModule;
+}
 
 /**
  * Usages a value.
@@ -151,10 +194,24 @@ async function ask(question, defaultValue = "") {
     return toStringValue(defaultValue);
   }
 
+  const clack = await loadCliPrompts();
   const hasDefault =
     defaultValue !== undefined &&
     defaultValue !== null &&
     String(defaultValue).length > 0;
+
+  if (clack?.text) {
+    const value = await clack.text({
+      message: question,
+      placeholder: hasDefault ? String(defaultValue) : undefined,
+      defaultValue: hasDefault ? String(defaultValue) : undefined,
+    });
+    if (clack.isCancel?.(value)) {
+      throw new Error("Prompt cancelled by user.");
+    }
+    const textValue = toStringValue(value, defaultValue).trim();
+    return textValue.length > 0 ? textValue : toStringValue(defaultValue);
+  }
 
   const response = await prompts(
     {
@@ -164,9 +221,6 @@ async function ask(question, defaultValue = "") {
       initial: hasDefault ? String(defaultValue) : undefined,
     },
     {
-      /**
-       * Ons Cancel.
-       */
       onCancel: () => {
         throw new Error("Prompt cancelled by user.");
       },
@@ -190,6 +244,32 @@ async function askRequired(question, defaultValue = "") {
     throw new Error(`${question} This value is required.`);
   }
 
+  const clack = await loadCliPrompts();
+  if (clack?.text) {
+    while (true) {
+      const value = await clack.text({
+        message: question,
+        placeholder:
+          defaultValue !== undefined &&
+          defaultValue !== null &&
+          String(defaultValue).length > 0
+            ? String(defaultValue)
+            : undefined,
+        defaultValue:
+          defaultValue !== undefined &&
+          defaultValue !== null &&
+          String(defaultValue).length > 0
+            ? String(defaultValue)
+            : undefined,
+      });
+      if (clack.isCancel?.(value)) {
+        throw new Error("Prompt cancelled by user.");
+      }
+      const textValue = String(value ?? "").trim();
+      if (textValue.length > 0) return textValue;
+    }
+  }
+
   while (true) {
     const response = await prompts(
       {
@@ -202,20 +282,12 @@ async function askRequired(question, defaultValue = "") {
           String(defaultValue).length > 0
             ? String(defaultValue)
             : undefined,
-        /**
-         * Validates a value.
-         * @param {*} value
-         * @returns {*}
-         */
         validate: (value) => {
           const text = String(value ?? "").trim();
           return text.length > 0 ? true : "A value is required.";
         },
       },
       {
-        /**
-         * Ons Cancel.
-         */
         onCancel: () => {
           throw new Error("Prompt cancelled by user.");
         },
@@ -238,6 +310,18 @@ async function askYesNo(question, defaultValue = false) {
     return Boolean(defaultValue);
   }
 
+  const clack = await loadCliPrompts();
+  if (clack?.confirm) {
+    const value = await clack.confirm({
+      message: question,
+      initialValue: Boolean(defaultValue),
+    });
+    if (clack.isCancel?.(value)) {
+      throw new Error("Prompt cancelled by user.");
+    }
+    return Boolean(value);
+  }
+
   const response = await prompts(
     {
       type: "confirm",
@@ -246,9 +330,6 @@ async function askYesNo(question, defaultValue = false) {
       initial: Boolean(defaultValue),
     },
     {
-      /**
-       * Ons Cancel.
-       */
       onCancel: () => {
         throw new Error("Prompt cancelled by user.");
       },
@@ -277,27 +358,34 @@ async function askChoice(question, choices, defaultValue) {
     return defaultValue;
   }
 
-  const normalizedChoices = choices.map(/**
-   * Functions a value.
-   * @param {*} choice
-   * @returns {Object}
-   */
-  choice => ({
+  const normalizedChoices = choices.map((choice) => ({
     title: choice,
-    value: choice
+    value: choice,
   }));
 
   const defaultIndex = Math.max(
     0,
     normalizedChoices.findIndex(
-      /**
-       * Functions a value.
-       * @param {*} choice
-       * @returns {boolean}
-       */
-      choice => choice.value.toLowerCase() === String(defaultValue ?? "").toLowerCase()
+      (choice) =>
+        choice.value.toLowerCase() === String(defaultValue ?? "").toLowerCase()
     )
   );
+
+  const clack = await loadCliPrompts();
+  if (clack?.select) {
+    const value = await clack.select({
+      message: question,
+      options: normalizedChoices.map((choice) => ({
+        label: choice.title,
+        value: choice.value,
+      })),
+      initialValue: normalizedChoices[defaultIndex]?.value || normalizedChoices[0]?.value,
+    });
+    if (clack.isCancel?.(value)) {
+      throw new Error("Prompt cancelled by user.");
+    }
+    return value ?? defaultValue;
+  }
 
   const response = await prompts(
     {
@@ -308,9 +396,6 @@ async function askChoice(question, choices, defaultValue) {
       initial: defaultIndex >= 0 ? defaultIndex : 0,
     },
     {
-      /**
-       * Ons Cancel.
-       */
       onCancel: () => {
         throw new Error("Prompt cancelled by user.");
       },
@@ -318,6 +403,36 @@ async function askChoice(question, choices, defaultValue) {
   );
 
   return response.value ?? defaultValue;
+}
+
+/**
+ * Picks a template from grouped categories.
+ * @param {string} defaultTemplate
+ * @returns {Promise<string>}
+ */
+async function askTemplateChoice(defaultTemplate) {
+  const normalizedDefault = String(defaultTemplate || DEFAULTS.template).toLowerCase();
+  const defaultGroup = TEMPLATE_GROUPS.find(group => group.templates.includes(normalizedDefault)) || TEMPLATE_GROUPS[0];
+  const group = await askChoice(
+    'Please select a template family.',
+    TEMPLATE_GROUPS.map(group => group.title),
+    defaultGroup.title
+  );
+  const selectedGroup = TEMPLATE_GROUPS.find(item => item.title === group) || defaultGroup;
+  return askChoice(
+    'Please select a project template.',
+    selectedGroup.templates,
+    normalizedDefault
+  );
+}
+
+/**
+ * Determines whether the selected template belongs to the web stack.
+ * @param {string} template
+ * @returns {boolean}
+ */
+function isWebTemplate(template) {
+  return ['webview', 'pwa', 'bedbox', 'react', 'solidjs', 'vue', 'angular', 'preact'].includes(String(template).toLowerCase());
 }
 
 /**
@@ -338,101 +453,81 @@ async function promptNewOptions(options, configDefaults = {}) {
   const defaultCompileSdk = configDefaults.compileSdk ?? DEFAULTS.compileSdk;
   const defaultUrl = configDefaults.url || DEFAULTS.webUrl;
   const defaultPermissions = Array.isArray(configDefaults.permissions)
-    ? configDefaults.permissions.join(",")
-    : String(configDefaults.permissions || "");
-  const defaultIcon = configDefaults.icon || "";
-  const defaultReactPlugins = Array.isArray(configDefaults.reactPlugins)
-    ? configDefaults.reactPlugins.join(",")
-    : String(configDefaults.reactPlugins || "");
-  const signingDefaults =
-    configDefaults.signing && typeof configDefaults.signing === "object"
+    ? configDefaults.permissions.join(',')
+    : String(configDefaults.permissions || '');
+  const defaultIcon = configDefaults.icon || '';
+  const defaultSigning =
+    typeof configDefaults.signing === 'boolean'
       ? configDefaults.signing
-      : {};
+      : normalizeBoolean(
+          configDefaults.signing?.enabled ?? configDefaults.signing?.signingEnabled,
+          false
+        );
 
   const name = String(
     options.name ??
-      (await askRequired("Please enter the project name.", defaultName))
+      (await askRequired('Please enter the project name.', defaultName))
   ).trim();
 
   const packageName = String(
     options.package ??
       (await askRequired(
-        "Please enter the Android package name.",
+        'Please enter the Android package name.',
         defaultPackage
       ))
   ).trim();
 
-  let template = String(options.template ?? "")
-    .trim()
-    .toLowerCase();
+  let template = String(options.template ?? '').trim().toLowerCase();
   if (!template) {
-    template = String(
-      await askChoice(
-        "Please select a project template.",
-        TEMPLATES,
-        defaultTemplate
-      )
-    )
-      .trim()
-      .toLowerCase();
+    template = await askTemplateChoice(defaultTemplate);
   }
 
   const minSdk = Number(
     options.minSdk ??
-      (await ask("Please enter the minimum SDK level.", String(defaultMinSdk)))
+      (await ask('Please enter the minimum SDK level.', String(defaultMinSdk)))
   );
   const targetSdk = Number(
     options.targetSdk ??
-      (await ask(
-        "Please enter the target SDK level.",
-        String(defaultTargetSdk)
-      ))
+      (await ask('Please enter the target SDK level.', String(defaultTargetSdk)))
   );
   const compileSdk = Number(
     options.compileSdk ??
-      (await ask(
-        "Please enter the compile SDK level.",
-        String(defaultCompileSdk)
-      ))
+      (await ask('Please enter the compile SDK level.', String(defaultCompileSdk)))
   );
 
-  const url = String(options.url ?? "").trim();
+  const url = String(options.url ?? '').trim();
   const finalUrl =
     url ||
-    (template === "webview" || template === "pwa"
+    (isWebTemplate(template)
       ? String(
-          await askRequired("Please enter the application URL.", defaultUrl)
+          await askRequired('Please enter the application URL.', defaultUrl)
         ).trim()
-      : "");
+      : '');
 
   const permissionsInput = String(
     options.permissions ?? defaultPermissions
   ).trim();
   const icon = String(
-    options.icon ?? (await ask("Please enter the icon path.", defaultIcon))
-  ).trim();
-  const reactPlugins = String(
-    options.reactPlugins ??
-      (await ask(
-        "Please enter React plugin packages (comma-separated).",
-        defaultReactPlugins
-      ))
+    options.icon ?? (await ask('Please enter the icon path.', defaultIcon))
   ).trim();
 
-  const signingDefaultValue =
-    typeof configDefaults.signing === "boolean"
-      ? configDefaults.signing
-      : normalizeBoolean(
-          signingDefaults.enabled ?? signingDefaults.signingEnabled,
-          false
-        );
+  const reactPlugins =
+    template === 'react'
+      ? String(
+          options.reactPlugins ??
+            (await ask(
+              'Please enter React plugin packages (comma-separated).',
+              String(configDefaults.reactPlugins || '')
+            ))
+        ).trim()
+      : '';
 
   const signing =
     options.signing !== undefined
       ? normalizeBoolean(options.signing)
       : await askYesNo(
-          "Would you like to enable signing scaffolding?",
-          signingDefaultValue
+          'Would you like to enable signing scaffolding?',
+          defaultSigning
         );
 
   return {
@@ -452,6 +547,7 @@ async function promptNewOptions(options, configDefaults = {}) {
 
 /**
  * Prompts Build Options.
+
  * @param {*} projectDirArg
  * @param {*} options
  * @param {*} configDefaults

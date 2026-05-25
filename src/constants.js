@@ -55,6 +55,8 @@ export const SUPPORTED_TEMPLATES = [
   "make",
   "game-java",
   "game-cpp",
+  "react-native",
+  "flutter",
 ];
 
 export const PLUGIN_CONFIG_FILES = [

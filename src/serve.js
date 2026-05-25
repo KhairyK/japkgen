@@ -107,6 +107,8 @@ export async function serveProject(projectDirArg = process.cwd(), { port = 4173,
         "Cache-Control": "no-cache",
       });
       res.end(`
+        console.log('Running On Version: 2.0.0');
+        console.warn('Warning: You Need Coffee If You Tired :)');
         const source = new EventSource('/__japkgen_events');
         source.addEventListener('reload', () => location.reload());
       `);
@@ -146,7 +148,7 @@ export async function serveProject(projectDirArg = process.cwd(), { port = 4173,
    */
   resolve => server.listen(port, resolve));
   logger.title("JAPKGEN Serve");
-  logger.success(`Server aktif di http://localhost:${port}`);
+  logger.success(`Server acvite on http://localhost:${port}`);
   logger.info(`Serving: ${rootDir}`);
   debugLog("serve", "Serving root", rootDir);
 
@@ -161,12 +163,12 @@ export async function serveProject(projectDirArg = process.cwd(), { port = 4173,
         for (const res of clients) {
           res.write(`event: reload\ndata: ${version}\n\n`);
         }
-        logger.dim("File berubah, browser akan reload.");
+        logger.dim("Files changed, the browser will reload.");
       });
-      logger.note("Live reload aktif.");
-    } catch {
+      logger.note("Live reload active.");
+    } catch (e) {
       logger.warn(
-        "File watcher tidak tersedia di platform ini. Serve tetap jalan tanpa live reload."
+        "File watching is not available on this platform. The server will continue without live reload.\n\nError Detail: " + e
       );
     }
   }

@@ -1,6 +1,6 @@
 {
   "name": "japkgen",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Modern Android app generator and APK builder CLI with smart templates and optimized tooling.",
   "keywords": [
     "javac",
@@ -79,6 +79,7 @@
   },
   "scripts": {
     "notice": "npx noticg",
+    "env-test": "node .install.js",
     "test": "node test/core.test.js",
     "format": "npx prettier . --write",
     "lint": "npx eslint .",

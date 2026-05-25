@@ -766,7 +766,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## 21. semver
 
-- Version: `7.8.0`
+- Version: `7.8.1`
 - License: `ISC`
 - Repository: git\+https://github.com/npm/node\-semver.git
 

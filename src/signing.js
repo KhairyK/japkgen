@@ -82,7 +82,7 @@ export async function createKeystore(
     throw new Error(
       result.stderr ||
         result.stdout ||
-        "Gagal membuat keystore. Pastikan keytool tersedia."
+        "Failed to create the keystore. Ensure that keytool is available."
     );
   }
   return {

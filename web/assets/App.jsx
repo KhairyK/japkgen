@@ -27,6 +27,7 @@ import {
   Package,
   Wrench,
   Code2,
+  HeartHandshake,
 } from "lucide-react";
 
 const features = [
@@ -210,6 +211,72 @@ const itemVariants = {
 
 const NEWS_API_URL = "https://japkgen.opendnf.cloud/api/news.php?limit=6";
 
+function DonateBox() {
+  return (
+    <div className="flex items-center justify-center min-h-screen p-6 text-white">
+      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 shadow-2xl">
+
+        {/* Top Glow */}
+        <div className="h-2 bg-gradient-to-r from-orange-400 via-pink-500 to-red-500" />
+
+        {/* Content */}
+        <div className="p-8">
+
+          {/* Icon */}
+          <div className="flex justify-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-orange-500/10 border border-orange-500/20">
+              <HeartHandshake className="h-10 w-10 text-orange-400" />
+            </div>
+          </div>
+
+          {/* Title */}
+          <div className="mt-6 text-center">
+            <h1 className="text-3xl font-black tracking-tight">
+              Support Me on Patreon
+            </h1>
+
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+              Help support my open-source projects, experiments,
+              and late-night coding chaos ☕
+            </p>
+          </div>
+
+          {/* Features */}
+          <div className="mt-8 space-y-3">
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+              🚀 Early access to projects
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+              💻 Behind-the-scenes development
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+              ❤️ Support future updates
+            </div>
+          </div>
+
+          {/* Button */}
+          <a
+            href="https://patreon.com/Khairy47/membership?utm_medium=donate&utm_source=website&utm_campaign=creatorshare_creator&utm_content=copyLink"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-orange-500 px-6 py-4 text-lg font-bold text-white transition-all hover:scale-[1.02] hover:bg-orange-400 active:scale-[0.98]"
+          >
+            Become a Patron
+            <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+          </a>
+
+          {/* Footer */}
+          <p className="mt-5 text-center text-xs text-zinc-500">
+            Even a small donation means a lot ✨
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const App = () => {
   const [copied, setCopied] = useState(false);
   const [news, setNews] = useState([]);
@@ -277,7 +344,8 @@ const App = () => {
     home: "/",
     docs: "/docs/",
     github: "https://github.com/KhairyK/japkgen",
-    npm: "https://npm.im/japkgen"
+    npm: "https://npm.im/japkgen",
+    donate: "https://patreon.com/c/Khairy47/membership?utm_medium=donate&utm_source=website&utm_campaign=creatorshare_creator&utm_content=copyLink"
   };
 
   function safeRedirect(key) {
@@ -370,6 +438,12 @@ const App = () => {
               className="hover:text-indigo-400 transition-colors"
             >
               Structure
+            </button>
+            <button 
+              onClick={() => safeRedirect('donate')}
+              className="hover:text-indigo-400 transition-colors"
+            >
+              Donate
             </button>
           </div>
 
@@ -791,6 +865,8 @@ const App = () => {
             Install JAPKGEN, pick a template, and start generating project
             scaffolds without the usual setup drag.
           </p>
+
+          <DonateBox />
 
           <div className="flex flex-wrap justify-center gap-4">
             <motion.button

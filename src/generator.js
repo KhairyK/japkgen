@@ -105,7 +105,8 @@ function smartPermissions({ templateName, url, permissions }) {
   if (
     templateName === "webview" ||
     templateName === "pwa" ||
-    ["react", "vue", "angular", "preact"].includes(templateName)
+    templateName === "bedbox" ||
+    ["react", "solidjs", "vue", "angular", "preact"].includes(templateName)
   ) {
     list.push("android.permission.INTERNET");
   }
@@ -342,6 +343,16 @@ export async function generateProject(cliOptions = {}) {
 
   await fs.mkdir(projectDir, { recursive: true });
 
+  await writeFileEnsured(
+    path.join(projectDir, "japkgen.meta.json"),
+    `${JSON.stringify({
+      templateName,
+      templateKind: template.kind || "android",
+      compiler: template.compiler || "android",
+      deprecated: Boolean(template.deprecated),
+    }, null, 2)}\n`
+  );
+
   const vars = {
     APP_NAME: projectName,
     PACKAGE: packageName,
@@ -391,6 +402,9 @@ export async function generateProject(cliOptions = {}) {
   logger.title("JAPKGEN New");
   logger.info(`Project: ${projectName}`);
   logger.info(`Template: ${templateName}`);
+  if (template.deprecated && template.deprecationMessage) {
+    logger.warn(template.deprecationMessage);
+  }
   logger.info(`Folder: ${projectDir}`);
   if (projectConfig.path) {
     logger.note(`Config file: ${path.basename(projectConfig.path)}`);
@@ -441,6 +455,13 @@ export async function generateProject(cliOptions = {}) {
       content = applyTemplate(content, vars);
       await fs.writeFile(filePath, content, "utf8");
     }
+  }
+
+  if (templateName === "react" && String(opts.reactPlugins || "").trim()) {
+    await writeFileEnsured(
+      path.join(projectDir, "frontend", "react-plugins.txt"),
+      `${parseList(opts.reactPlugins).join("\n")}\n`
+    );
   }
 
   await generateIcons({

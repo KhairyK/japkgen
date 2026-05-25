@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-05-25
+
+### Fixed
+- Android Dependency
+- CLI UI/UX
+
+### Added
+- Flutter and React Native Templates
+
 ## [2.1.1] - 2026-05-17
 
 ### Fixed
